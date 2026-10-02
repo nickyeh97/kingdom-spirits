@@ -76,14 +76,16 @@ docs/GDD.md                            # 遊戲設計開發規格書（需求基
 docs/ART_PIPELINE.md                   # 美術產製流程（AI prompt → Blender；不佳改買素材）
 docs/DEVELOPMENT.md                    # 開發指南：Unity 版本、命令列測試/建置、CI Secrets、Vercel 部署
 docs/PROGRESS.md                       # 進度總覽（單一事實來源；每個 Sprint 結束必更新）
-Assets/Config                          # 階段門檻、配色、經文池（資料，不寫死在程式）
-Assets/Core                            # 純 C# 核心邏輯（可測）
+Assets/Core                            # 純 C# 核心邏輯（可測）：規則、目錄資料、REST 請求與 JSON 解析
+Assets/Resources                       # supabase.json（公開設定）、Fonts/（中文字型子集＋OFL 授權）
 Assets/Runtime                         # MonoBehaviour：畫面、動畫、Supabase 客戶端
 Assets/Editor                          # 命令列建置腳本（SpiritBeast.Editor.Build.Web）
 Assets/Plugins/WebGL                   # jslib：從網頁取走授權片段
 Assets/Tests/EditMode                  # 核心邏輯單元測試（只用 NUnit）
 Assets/WebGLTemplates                  # 自訂 index.html（讀授權片段、清網址列、載入畫面）
 Tools/CoreTests                        # dotnet 測試專案：編譯 Assets/Core＋Assets/Tests，免 Unity 授權
+Tools/RuntimeCompileCheck              # 以 UnityEngine 參考組件編譯 Core＋Runtime，免 Unity 授權
+Tools/subset-font.py                   # 產生中文字型子集
 .github/workflows/ci.yml               # core-tests／unity（需授權）／deploy（main → Vercel）
 ```
 
@@ -91,8 +93,10 @@ Tools/CoreTests                        # dotnet 測試專案：編譯 Assets/Cor
 
 - **先想再寫**：寫/改程式一律套用 `.claude/skills/karpathy-guidelines`——說明假設、簡單優先、只動該動的、先定可驗證的成功準則再動手。
 - **進度文件（必遵守）**：`docs/PROGRESS.md` 是跨 session 的進度單一事實來源；每個 Sprint 結案、需求異動、外部設定完成時必更新；新 session 開工前先讀它。
-- **測試**：核心規則（等級、階段、進化判定、片段解析、鼓勵語挑選）**必須**有 EditMode 測試，含邊際案例；送 PR 前至少跑 `dotnet test Tools/CoreTests`；能開 Unity 時再跑 EditMode 測試與 Web 建置；CI 於 push/PR 自動執行。
-- **設定值不寫死**：階段門檻、配色、經文池放 `Assets/Config` 的 ScriptableObject。
+- **測試**：核心規則（等級、階段、進化判定、片段解析、鼓勵語挑選）**必須**有 EditMode 測試，含邊際案例；送 PR 前至少跑 `dotnet test Tools/CoreTests` 與 `dotnet build Tools/RuntimeCompileCheck`；能開 Unity 時再跑 EditMode 測試與 Web 建置；CI 於 push/PR 自動執行。
+- **設定值不寫死在邏輯裡**：階段門檻、配色、果子、經文池集中在 `Assets/Core/Catalog.cs`（Core 無 UnityEngine 依賴，兩邊測試都驗得到）。
+- **新增中文文案後重產字型子集**（`Tools/subset-font.py`），否則新字在 WebGL 顯示成方塊。
+- **Supabase 設定**在 `Assets/Resources/supabase.json`（URL＋anon key，公開值）；絕不放 service role key。
 - **收尾檢查（每次需求實作完畢後必跑）**：
   1. 守則檢查清單（`docs/DESIGN_PRINCIPLES.md` §4）七項重過一次。
   2. 用測試帳號在**手機實機**開一輪（載入時間、觸控、字型）。

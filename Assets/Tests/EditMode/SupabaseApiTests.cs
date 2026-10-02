@@ -104,7 +104,7 @@ namespace SpiritBeast.Tests
         public void DisplayDate_UsesTaiwanTime()
         {
             // UTC 9/12 16:30 ＝ 台灣 9/13 00:30
-            Assert.That(Display.Date(new DateTimeOffset(2026, 9, 12, 16, 30, 0, TimeSpan.Zero)), Is.EqualTo("2026/09/13"));
+            Assert.That(DisplayText.Date(new DateTimeOffset(2026, 9, 12, 16, 30, 0, TimeSpan.Zero)), Is.EqualTo("2026/09/13"));
         }
 
         [TestCase(0, "網路")]

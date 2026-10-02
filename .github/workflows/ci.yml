@@ -17,6 +17,8 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet test Tools/CoreTests
+      # Runtime 程式的編譯檢查（免 Unity 授權；見 csproj 註解的限制）
+      - run: dotnet build Tools/RuntimeCompileCheck
 
   # Unity EditMode 測試＋Web 建置：需要 UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD（見 docs/DEVELOPMENT.md）
   unity:

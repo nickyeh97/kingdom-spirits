@@ -142,7 +142,7 @@ namespace SpiritBeast.Core
         }
     }
 
-    public static class Display
+    public static class DisplayText
     {
         /// <summary>教會在台灣，紀錄日期一律以台灣時間顯示（WebGL 取不到裝置時區）</summary>
         public static readonly TimeSpan TaiwanOffset = TimeSpan.FromHours(8);
