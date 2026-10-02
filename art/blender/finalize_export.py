@@ -17,7 +17,16 @@ def select_only(o):
     o.select_set(True)
     bpy.context.view_layer.objects.active = o
 
-# 1) Metaball → 一般網格（Unity 只看得懂網格）
+NAME = bpy.context.scene.get("spirit_name", "Lamb_Baby")   # 造型腳本會寫入輸出名稱
+
+# 1) 曲線（羊角）→ 網格：曲線跟 metaball 一樣是「算出來的」，Unity 看不懂
+for o in [o for o in bpy.data.objects if o.type == 'CURVE']:
+    base = o.name.split(".")[0]
+    select_only(o)
+    bpy.ops.object.convert(target='MESH')
+    bpy.context.active_object.name = base
+
+# Metaball → 一般網格（Unity 只看得懂網格）
 wool = bpy.data.objects["WoolCloud"]
 select_only(wool)
 bpy.ops.object.convert(target='MESH')
@@ -55,7 +64,7 @@ WHITE = (1, 1, 1, 0)            # 眼睛反光
 SLOT = {
     "Wool": PRIMARY,
     "Head": SECONDARY, "Ear": SECONDARY, "Leg": SECONDARY,
-    "Cheek": ACCENT, "EarInner": ACCENT,
+    "Cheek": ACCENT, "EarInner": ACCENT, "Horn": ACCENT,
     "Eye": INK, "Nose": INK, "Mouth": INK, "MouthLine": INK, "Hoof": INK,
     "EyeShine": WHITE,
 }
@@ -82,7 +91,7 @@ for o in bpy.data.objects:
 body = bpy.data.objects["Wool"]
 bpy.context.view_layer.objects.active = body
 bpy.ops.object.join()
-body.name = "Lamb_Baby"
+body.name = NAME
 
 # 嘴保持獨立（要做張嘴動畫），設成身體的子物件，一起移動
 mouth.parent = body
@@ -126,7 +135,7 @@ for o in (body, mouth):
     o.data.materials.append(mat)
 
 # ---------- 4) 匯出 FBX 給 Unity ----------
-path = bpy.path.abspath("//Lamb_Baby.fbx") if bpy.data.filepath else os.path.join(os.path.expanduser("~"), "Lamb_Baby.fbx")
+path = bpy.path.abspath(f"//{NAME}.fbx") if bpy.data.filepath else os.path.join(os.path.expanduser("~"), f"{NAME}.fbx")
 bpy.ops.object.select_all(action='DESELECT')
 body.select_set(True); mouth.select_set(True)
 bpy.ops.export_scene.fbx(
