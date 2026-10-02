@@ -9,6 +9,9 @@
 /[Mm]emoryCaptures/
 /[Rr]ecordings/
 
+# 本機另開的參考用空專案（不進版控）
+/[Kk]ingdom [Ss]pirits/
+
 # IDE 與 Unity 產生的專案檔（根目錄）
 /*.csproj
 /*.sln
