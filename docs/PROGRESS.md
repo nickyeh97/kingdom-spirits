@@ -15,6 +15,8 @@
 - [ ] G0 骨架：Unity 6 專案、asmdef 三層、命令列建置/測試、CI、部署、`index.html` 讀授權片段
 - [ ] G1 核心迴圈（占位美術）：Core 邏輯＋測試、Supabase 讀寫、S0–S6
 - [ ] G2 美術：3 變體 × 2 網格、動畫、配色遮罩、圖示
+  - [x] 小羊幼體造型定稿（Blender 程序化腳本 `art/blender/lamb_baby.py`，2026-10-02）
+  - [ ] 小羊：轉網格／減面、配色遮罩、匯出 FBX；小羊成體；小獅幼體／成體
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [ ] P1 平台端（於 `kingdom-little-leaders` repo）：migration＋RLS、家長服事卡頁、鼓勵話語、連結
 
