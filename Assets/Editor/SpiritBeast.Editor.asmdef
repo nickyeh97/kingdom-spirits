@@ -1,0 +1,8 @@
+{
+    "name": "SpiritBeast.Editor",
+    "rootNamespace": "SpiritBeast.Editor",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ]
+}

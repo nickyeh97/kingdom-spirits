@@ -1,0 +1,7 @@
+{
+    "name": "SpiritBeast.Runtime",
+    "rootNamespace": "SpiritBeast.Runtime",
+    "references": [
+        "SpiritBeast.Core"
+    ]
+}

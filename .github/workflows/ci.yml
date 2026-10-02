@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # 純 C# 核心測試：不需要 Unity 授權，每次必跑
+  core-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet test Tools/CoreTests
+
+  # Unity EditMode 測試＋Web 建置：需要 UNITY_LICENSE / UNITY_EMAIL / UNITY_PASSWORD（見 docs/DEVELOPMENT.md）
+  unity:
+    runs-on: ubuntu-latest
+    env:
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+    steps:
+      - id: license
+        run: |
+          if [ -z "$UNITY_LICENSE" ]; then
+            echo "::warning::尚未設定 UNITY_LICENSE，本次未執行 Unity 測試與 Web 建置（設定方式見 docs/DEVELOPMENT.md）"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.license.outputs.ok == 'true'
+        uses: actions/checkout@v4
+      - if: steps.license.outputs.ok == 'true'
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Packages/manifest.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: Library-
+      - if: steps.license.outputs.ok == 'true'
+        uses: game-ci/unity-test-runner@v4
+        with:
+          testMode: editmode
+      - if: steps.license.outputs.ok == 'true'
+        uses: game-ci/unity-builder@v4
+        with:
+          targetPlatform: WebGL
+          buildMethod: SpiritBeast.Editor.Build.Web
+      - if: steps.license.outputs.ok == 'true'
+        run: sudo cp vercel.json Builds/Web/
+      - if: steps.license.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: Builds/Web
+
+  # 部署到 Vercel：僅 main，需要 VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: unity
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+    steps:
+      - id: check
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$UNITY_LICENSE" ]; then
+            echo "::warning::尚未設定 VERCEL_TOKEN 或 UNITY_LICENSE，本次未部署（設定方式見 docs/DEVELOPMENT.md）"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.check.outputs.ok == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: web
+      - if: steps.check.outputs.ok == 'true'
+        run: npx --yes vercel@latest deploy web --prod --yes --token "$VERCEL_TOKEN"
