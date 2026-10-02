@@ -2,8 +2,8 @@
 
 > 跨 session／跨協作者的**進度單一事實來源**。每個 Sprint 結案、需求異動、外部設定完成時必更新。
 
-**現況（2026-10-02）**：G0 骨架完成；**本機 Web 建置成功，瀏覽器看到旋轉方塊**（Unity 端程式首次編譯即通過）。
-剩下的 G0 驗收：確認授權片段顯示、部署到 Vercel 後以手機 4G 量載入時間、CI 設好 Unity 授權。
+**現況（2026-10-02）**：**G0 結案**（組長確認）——本機 Web 建置成功、旋轉方塊與 `Fragment OK` 顯示正常、
+網址列片段清除、Unity EditMode 17 項全綠。手機 4G 載入時間待部署後量測（見外部依賴）。下一步：G1。
 
 ## 已完成
 
@@ -25,8 +25,8 @@
 - [x] 本機以 Unity 6000.3.25f1 開啟專案，commit 產生的 `.meta` 與 `ProjectSettings/*.asset`；
       PlayerSettings 已與建置腳本對齊（公司名 TBOJ、模板 `PROJECT:SpiritBeast`、Brotli＋解壓縮後備）
 - [x] 本機 Web 建置成功（`SpiritBeast.Editor.Build.Web`），`serve Builds/Web` 開啟看到旋轉方塊（2026-10-02）
-- [ ] **G0 驗收（剩餘）**：本機帶片段開啟顯示 `Fragment OK` 且網址列 `#…` 消失；EditMode 測試在 Unity 跑綠；
-      部署網址在手機開啟、4G 首次載入 ≤ 10 秒；commit 建置時產生的 `Assets/Scenes/Main.unity`
+- [x] G0 驗收：帶片段開啟顯示 `Fragment OK` 且網址列 `#…` 消失；Unity EditMode 17 項全綠；
+      `Assets/Scenes/Main.unity` 已 commit（2026-10-02，組長確認）
 - [ ] G1 核心迴圈（占位美術）：等級/階段/進化規則＋測試、Supabase 讀寫、S0–S6
 - [ ] G2 美術：URP＋toon、3 變體 × 2 網格、動畫、配色遮罩、圖示（先試 AI prompt，見 `docs/ART_PIPELINE.md`）
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
@@ -38,6 +38,7 @@
 - **Unity 6000.3.25f1 的 WebGL 模組**：本機建置前確認已安裝（Hub →「安裝」→ 6000.3.25f1 →「新增模組」）
 - **GitHub Secrets**：`UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD`（Unity 建置）；
   `VERCEL_TOKEN`、`VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`（部署）。步驟見 `docs/DEVELOPMENT.md`
+- **手機 4G 首次載入 ≤ 10 秒**（G0 遺留驗收）：Vercel 部署設定完成後，以手機開部署網址看右下角秒數
 - 美術：Lamb 幼體 AI 試做（兩個晚上為限），結果決定 AI 或買素材
 
 ## Sprint 歷程
@@ -45,4 +46,4 @@
 | Sprint | 範圍 | 狀態 | 文件 |
 | --- | --- | --- | --- |
 | 設計 | GDD v0.3、專案 MD、守則搬入、組長裁決、美術流程研究 | ✅ | `docs/GDD.md`、`docs/ART_PIPELINE.md` |
-| G0 | Unity 骨架、授權片段交接、命令列建置、CI、部署設定 | 🟡 本機建置成功，待手機與部署驗收 | `docs/DEVELOPMENT.md` |
+| G0 | Unity 骨架、授權片段交接、命令列建置、CI、部署設定 | ✅ 結案（手機載入時間待部署後量測） | `docs/DEVELOPMENT.md` |
