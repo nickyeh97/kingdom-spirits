@@ -9,6 +9,8 @@ jobs:
   # 純 C# 核心測試：不需要 Unity 授權，每次必跑
   core-tests:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Taipei # 抓「日期解析受執行環境時區影響」這類錯誤
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
