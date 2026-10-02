@@ -2,8 +2,9 @@
 
 > 跨 session／跨協作者的**進度單一事實來源**。每個 Sprint 結案、需求異動、外部設定完成時必更新。
 
-**現況（2026-09-30）**：G0 骨架程式完成，核心測試在 dotnet 全綠；**Unity 端尚未實際建置**——
-等 CI 設好 Unity 授權，或在本機開專案跑一次建置，才能完成 G0 驗收（手機實機載入 ≤ 10 秒）。
+**現況（2026-10-02）**：G0 骨架程式完成，核心測試在 dotnet 全綠；專案已在本機以 Unity 6000.3.25f1 開啟成功，
+`.meta` 與 `ProjectSettings` 已 commit。**尚未實際建置 Web**——待本機建置一次或 CI 設好 Unity 授權，
+才能完成 G0 驗收（手機實機載入 ≤ 10 秒）。
 
 ## 已完成
 
@@ -22,8 +23,10 @@
 
 ## 尚未實作（依 GDD §9）
 
+- [x] 本機以 Unity 6000.3.25f1 開啟專案，commit 產生的 `.meta` 與 `ProjectSettings/*.asset`；
+      PlayerSettings 已與建置腳本對齊（公司名 TBOJ、模板 `PROJECT:SpiritBeast`、Brotli＋解壓縮後備）
 - [ ] **G0 驗收**：Unity 實際建置成功、EditMode 測試綠、部署網址在手機開啟看到旋轉方塊與
-      `Fragment OK`、4G 首次載入 ≤ 10 秒；commit 第一次開專案產生的 `.meta` 與 `ProjectSettings/*.asset`
+      `Fragment OK`、4G 首次載入 ≤ 10 秒
 - [ ] G1 核心迴圈（占位美術）：等級/階段/進化規則＋測試、Supabase 讀寫、S0–S6
 - [ ] G2 美術：URP＋toon、3 變體 × 2 網格、動畫、配色遮罩、圖示（先試 AI prompt，見 `docs/ART_PIPELINE.md`）
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
@@ -32,7 +35,7 @@
 
 ## 外部依賴
 
-- **本機安裝 Unity 6000.3.25f1（含 WebGL 模組）**：目前本機裝的是 6.7 Beta，CI 沒有對應映像
+- **Unity 6000.3.25f1 的 WebGL 模組**：本機建置前確認已安裝（Hub →「安裝」→ 6000.3.25f1 →「新增模組」）
 - **GitHub Secrets**：`UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD`（Unity 建置）；
   `VERCEL_TOKEN`、`VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`（部署）。步驟見 `docs/DEVELOPMENT.md`
 - 美術：Lamb 幼體 AI 試做（兩個晚上為限），結果決定 AI 或買素材
