@@ -71,12 +71,13 @@ Lion:  a baby lion cub spirit creature with a small soft mane and a gentle smile
 
 ## 5. Blender 整理規格（對應 GDD §7.3）
 
-- [ ] 成體 ≤ 8k 三角形、幼體 ≤ 6k（Decimate 修改器）
+- [ ] **整隻 ≤ 8000 三角形（硬上限，含嘴等子網格與配件）**；幼體建議 ≤ 6000（Decimate 修改器）
 - [ ] 單一材質、貼圖 ≤ 1024²
-- [ ] 另烘一張**配色遮罩貼圖**（R＝主色、G＝副色、B＝點綴色），讓一組網格套八種配色
+- [ ] 寫入**頂點色屬性 `Mask`**（`art/blender/finalize_export.py`）：A=1 時 R／G／B＝主／副／點綴色槽，A=0 時 RGB＝固定色；FBX 以 LINEAR 匯出
 - [ ] 原點在腳底、面向 +Z、比例 1 單位＝1 公尺
 - [ ] 綁骨：四足（Lamb、Lion）共用一套、鳥類（Dove）一套，動畫才能跨變體重用
 - [ ] 匯出 FBX 到 `Assets/Art/Beasts/<id>/`，檔名 `<id>_baby.fbx`、`<id>_adult.fbx`
+- [ ] 進 Unity 後跑**配色預覽**（選取 FBX →「Spirit Beast/配色預覽（選取的模型）」），規格檢查全部 [OK] 或只剩可接受的 [注意]
 
 ## 6. 什麼叫「成果不好」→ 改買素材
 

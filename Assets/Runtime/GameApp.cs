@@ -50,7 +50,12 @@ namespace SpiritBeast.Runtime
         string _celebrateMessage, _invitation;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void Create() => new GameObject(nameof(GameApp)).AddComponent<GameApp>();
+        static void Create()
+        {
+            // 美術檢查用的配色預覽場景不啟動遊戲
+            if (FindAnyObjectByType<PalettePreview>() != null) return;
+            new GameObject(nameof(GameApp)).AddComponent<GameApp>();
+        }
 
         void Start()
         {

@@ -95,6 +95,16 @@ npx --yes serve Builds/Web
 按 Play 就會用這組身分讀資料。access token 可從平台的瀏覽器開發者工具 → Application →
 Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時過期。**不要 commit 或分享這個值。**
 
+## 美術檢查：配色預覽
+
+匯入靈獸 FBX 後，在 Project 視窗選取它 → 選單「**Spirit Beast/配色預覽（選取的模型）**」，
+會開一個不存檔的暫存場景並自動 Play：
+
+- 上方 8 個色票：點一個單看那組配色，「全部」把 8 組排成 4×2；可暫停轉動、轉向 180°（確認模型正面朝哪）
+- 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
+- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
+- 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
+
 ## 中文字型
 
 WebGL 沒有系統字型，介面用的是 `Assets/Resources/Fonts/NotoSansTC-Subset.ttf`（程式用到的字＋Big5 常用 5401 字）。

@@ -22,14 +22,15 @@ namespace SpiritBeast.Core
     public sealed class Palette
     {
         public string Id { get; }
+        public string Name { get; }
         /// <summary>主色／副色／點綴色，格式 #RRGGBB</summary>
         public string Main { get; }
         public string Secondary { get; }
         public string Accent { get; }
 
-        public Palette(string id, string main, string secondary, string accent)
+        public Palette(string id, string name, string main, string secondary, string accent)
         {
-            Id = id; Main = main; Secondary = secondary; Accent = accent;
+            Id = id; Name = name; Main = main; Secondary = secondary; Accent = accent;
         }
     }
 
@@ -65,14 +66,14 @@ namespace SpiritBeast.Core
 
         public static readonly IReadOnlyList<Palette> Palettes = new[]
         {
-            new Palette("p1", "#F6E7C8", "#E2B97F", "#7A5C3E"), // 奶油
-            new Palette("p2", "#FFD3DA", "#F497A9", "#8A3B4D"), // 櫻花
-            new Palette("p3", "#CFE8FF", "#7FB6E8", "#2F5D8A"), // 晴空
-            new Palette("p4", "#D6F2D0", "#8CCB7E", "#3F6E35"), // 嫩芽
-            new Palette("p5", "#FFE9A8", "#F5C542", "#8A6A12"), // 陽光
-            new Palette("p6", "#E5D9FF", "#AE97EA", "#4E3D86"), // 薰衣草
-            new Palette("p7", "#FFD9B8", "#F59E5B", "#8A4A1C"), // 蜜桃
-            new Palette("p8", "#E9EEF2", "#A9B6C2", "#3C4A57"), // 雲朵
+            new Palette("p1", "奶油", "#F6E7C8", "#E2B97F", "#7A5C3E"),
+            new Palette("p2", "櫻花", "#FFD3DA", "#F497A9", "#8A3B4D"),
+            new Palette("p3", "晴空", "#CFE8FF", "#7FB6E8", "#2F5D8A"),
+            new Palette("p4", "嫩芽", "#D6F2D0", "#8CCB7E", "#3F6E35"),
+            new Palette("p5", "陽光", "#FFE9A8", "#F5C542", "#8A6A12"),
+            new Palette("p6", "薰衣草", "#E5D9FF", "#AE97EA", "#4E3D86"),
+            new Palette("p7", "蜜桃", "#FFD9B8", "#F59E5B", "#8A4A1C"),
+            new Palette("p8", "雲朵", "#E9EEF2", "#A9B6C2", "#3C4A57"),
         };
 
         public static Palette FindPalette(string id) => Palettes.FirstOrDefault(p => p.Id == id) ?? Palettes[0];

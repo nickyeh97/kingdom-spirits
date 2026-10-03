@@ -34,6 +34,11 @@ Runtime 以 UnityEngine 參考組件編譯通過；平台端資料表＋RLS＋�
 - [ ] **G1 驗收**：Unity 編譯與 EditMode 全綠；測試帳號完成「第一次相遇 → ＋1 服事 → 升等 → 第 4 次進化 → 鼓勵語」；
       換成別人孩子的 id 讀不到；`.meta` commit
 - [ ] G2 美術：URP＋toon、3 變體 × 2 網格、動畫、配色遮罩、圖示（先試 AI prompt，見 `docs/ART_PIPELINE.md`）
+  - [x] 小羊幼體／成體以 Blender 程序化腳本建模（另一分支 `claude/nice-pasteur-ubt4t1` 的 `art/blender/`，尚未合併）
+  - [x] 配色遮罩改為頂點色 `Mask`（GDD §7.2，2026-10-02）；Unity 端換色著色器 `SpiritBeast/PaletteMask`
+  - [x] 美術檢查工具：配色預覽（8 組並排、單看、轉向）＋自動規格檢查（`ModelSpecRules`，11 項測試）（2026-10-03）
+  - [ ] 小羊實際 FBX 在 Unity 的規格檢查結果（待組長跑配色預覽回報）；FBX 進版控與 `Assets/Art/LICENSES.md`
+  - [ ] 花紋貼圖（展 UV）、骨架與動畫、小獅與鴿子、正式 toon 著色器（描邊）、BeastView 換成正式模型
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [x] P1 平台端第一部分（kingdom-little-leaders v0.6.0，PR #45）：migration＋RLS（本機 Postgres 33 項行為測試全過）、
       「我的 → 小領袖靈獸」入口（只對兒童班顯示）
