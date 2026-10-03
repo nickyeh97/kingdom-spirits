@@ -61,11 +61,13 @@ ACCENT    = (0, 0, 1, 1)   # 點綴色 ← 臉頰、內耳
 # 固定色（永遠不換）：A = 0，RGB 直接就是顏色本身
 INK   = (0.02, 0.02, 0.03, 0)   # 眼睛、鼻子、嘴、蹄
 WHITE = (1, 1, 1, 0)            # 眼睛反光
+HORN  = (0.85, 0.70, 0.45, 0)   # 羊角：固定的象牙色（若放進點綴色槽，會跟臉頰同色）
 
 SLOT = {
     "Wool": PRIMARY,
     "Head": SECONDARY, "Ear": SECONDARY, "Leg": SECONDARY,
-    "Cheek": ACCENT, "EarInner": ACCENT, "Horn": ACCENT,
+    "Cheek": ACCENT, "EarInner": ACCENT,
+    "Horn": HORN,
     "Eye": INK, "Nose": INK, "Mouth": INK, "MouthLine": INK, "Hoof": INK,
     "EyeShine": WHITE,
 }

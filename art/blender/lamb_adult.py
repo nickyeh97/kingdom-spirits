@@ -69,15 +69,21 @@ sphere("Nose",      face(0, -0.278, -0.052), Vector((0.032, 0.018, 0.020)) * f, 
 sphere("Mouth",     face(0, -0.268, -0.098), Vector((0.028, 0.012, 0.008)) * f, color=INK)
 sphere("MouthLine", face(0, -0.274, -0.075), Vector((0.005, 0.006, 0.02)) * f,  color=INK)
 
-# ---------- 腳：變長 ----------
+# ---------- 腳：變長，而且有「形狀」 ----------
+def cone(name, loc, r_bottom, r_top, depth, color):
+    bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=r_bottom, radius2=r_top, depth=depth, location=loc)
+    return put(bpy.context.active_object, name, (1, 1, 1), (0, 0, 0), color)
+
 for s in (1, -1):
     for y in LEG_Y:
-        cylinder("Leg",  (LEG_X * s, y, LEG_LEN / 2 + 0.03), LEG_R, LEG_LEN, FACE)
-        cylinder("Hoof", (LEG_X * s, y, 0.035), LEG_R + 0.006, 0.07, INK)
+        # 腿：上粗下細的錐形（大腿有肉、腳踝細），比直筒更有「長大」的感覺
+        cone("Leg",  (LEG_X * s, y, LEG_LEN / 2 + 0.05), LEG_R * 0.78, LEG_R * 1.15, LEG_LEN, FACE)
+        # 蹄：下寬上窄，站得穩
+        cone("Hoof", (LEG_X * s, y, 0.04), LEG_R * 1.0, LEG_R * 0.8, 0.08, INK)
 
 # ---------- 新技巧：用曲線做捲角 ----------
-HORN_CENTER = (0.40, 0.08, 0.06)   # 螺旋中心（幼體臉座標）：在毛帽「外面」的頭側
-HORN_R0 = 0.17                     # 第一圈的半徑
+HORN_CENTER = (0.40, 0.24, 0.08)   # 螺旋中心（幼體臉座標）：在頭側「偏後方」→ 整個捲角往後長
+HORN_R0 = 0.19                     # 第一圈的半徑
 HORN_TURNS = 1.25                  # 捲幾圈
 
 def horn(side):
@@ -96,9 +102,9 @@ def horn(side):
     cx, cy, cz = HORN_CENTER
     for i in range(N):
         t = i / (N - 1)
-        theta = math.radians(100) - t * HORN_TURNS * 2 * math.pi   # 頭頂 → 往後 → 往下 → 往前捲
+        theta = math.radians(150) - t * HORN_TURNS * 2 * math.pi   # 角根在頭頂偏前 → 往上往後拱 → 往下 → 往內捲，尖端停在後方
         r = HORN_R0 * (1 - 0.7 * t)
-        x = cx - 0.12 * (1 - t) ** 3                                 # 角根埋進毛帽，很快就移到頭的外側
+        x = cx - 0.16 * (1 - t) ** 3                                 # 角根接在毛帽上，很快就移到頭的外側
         p = face(x * side, cy + r * math.cos(theta), cz + r * math.sin(theta))
         sp.points[i].co = (p.x, p.y, p.z, 1)
         sp.points[i].radius = 1.0 - 0.7 * t      # 越往末端越細
@@ -140,16 +146,20 @@ def ring(center, half, z_frac, count, r, offset=0.0):
         if not in_face_window(p):
             ball(p, r)
 
-# 1) 身體：成體的毛更蓬——花邊的毛球更大、多一圈，背上再加一排
-WOOL_PUFF = 1.12   # 毛比身體膨多少（幼體 1.0）
+# 1) 身體：成體比幼體大一圈，但保留「一顆一顆半圓」的花邊——
+#    關鍵是「間距 ÷ 半徑」：毛帽約 2.5，所以顆粒分明；
+#    太擠（< 2）力場互相疊加，就會融成一整片光滑的雲，看不出顆粒。
+#    所以每圈放幾顆不再手寫，改由「這圈多長 ÷ 想要的間距」算出來。
+WOOL_PUFF = 1.06   # 毛比身體膨多少（幼體 1.0）
+GAP = 2.4          # 間距 ÷ 半徑（越大顆粒越分明）
 BH = BODY_HALF * WOOL_PUFF
-ellipsoid(BODY_C, BH)
-ring(BODY_C, BH, 0.75, 8, 0.15)
-ring(BODY_C, BH, 0.40, 12, 0.16, offset=0.5)
-ring(BODY_C, BH, 0.0, 14, 0.17)
-ring(BODY_C, BH, -0.45, 12, 0.15, offset=0.5)
-for y in (-0.25, 0.0, 0.25):                                 # 背脊一排大毛球
-    ball(BODY_C + Vector((0, BH.y * y * 2, BH.z * 0.95)), 0.17)
+ellipsoid(BODY_C, BH * 0.92)
+for zf, r, off in ((0.85, 0.11, 0.0), (0.55, 0.12, 0.5), (0.2, 0.13, 0.0), (-0.15, 0.13, 0.5), (-0.5, 0.11, 0.0)):
+    rr = math.sqrt(1 - zf * zf)
+    a_, b_ = BH.x * rr, BH.y * rr
+    circ = math.pi * (3 * (a_ + b_) - math.sqrt((3 * a_ + b_) * (a_ + 3 * b_)))   # 橢圓周長（Ramanujan 近似）
+    n = max(5, round(circ / (GAP * r)))
+    ring(BODY_C, BH, zf, n, r, off)                          # 五圈交錯的半圓花邊
 ball(BODY_C + Vector((0, BH.y, 0.08)), 0.11)                 # 尾巴
 
 # 2) 新：脖子——從身體前上方連到頭後方，一串漸漸變小的毛球
