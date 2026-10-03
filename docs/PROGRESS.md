@@ -10,7 +10,7 @@ Runtime 以 UnityEngine 參考組件編譯通過；平台端資料表＋RLS＋�
 
 - [x] 設計守則搬入（`docs/DESIGN_PRINCIPLES.md`）
 - [x] GDD v0.3（`docs/GDD.md`；§10 七項全數裁決：等級 `count+1`、老師唯讀、不顯示進度條、
-      紀錄時間＝按下儲存的時刻、幼幼班不納入、命名 Phase 2、美術先試 AI prompt；靈獸名稱英文顯示）
+      紀錄時間＝按下儲存的時刻、幼幼班不納入（10-03：幼童班也暫不開放，只開放兒童班）、命名 Phase 2、美術先試 AI prompt；靈獸名稱英文顯示）
 - [x] 美術產製流程研究（`docs/ART_PIPELINE.md`）
 - [x] 專案指引（`CLAUDE.md`）與 karpathy skill
 - [x] G0 程式骨架：
@@ -36,7 +36,9 @@ Runtime 以 UnityEngine 參考組件編譯通過；平台端資料表＋RLS＋�
 - [ ] G2 美術：URP＋toon、3 變體 × 2 網格、動畫、配色遮罩、圖示（先試 AI prompt，見 `docs/ART_PIPELINE.md`）
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [x] P1 平台端第一部分（kingdom-little-leaders v0.6.0，PR #45）：migration＋RLS（本機 Postgres 33 項行為測試全過）、
-      「我的 → 小領袖靈獸」入口（幼幼班不顯示）
+      「我的 → 小領袖靈獸」入口（只對兒童班顯示）
+- [x] 修正：Unity 編譯錯誤「找不到 UnityWebRequest」——manifest 補 `com.unity.modules.unitywebrequest`
+      （另加 `animation` 給 FBX 模型）；Runtime 編譯檢查改為只引用 manifest 啟用的模組，已能重現同一組錯誤（2026-10-03）
 - [ ] P1 平台端第二部分：家長服事卡頁（鼓勵話語編輯、歷史檢視與誤登刪除）、手冊章節
 
 ## 外部依賴
