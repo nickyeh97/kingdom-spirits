@@ -35,7 +35,7 @@ wool.name = "Wool"                       # 轉換後名字會變，順手改回�
 print("轉換後羊毛：", tris(wool))
 
 # 2) 減面：Decimate（Collapse）—— 用「目標面數」反推比例，毛變多變少都會落在預算內
-WOOL_TRI_TARGET = 3000
+WOOL_TRI_TARGET = bpy.context.scene.get("wool_tri_target", 3000)   # 造型腳本可自訂（角越大，毛就要越省）
 dec = wool.modifiers.new("Decimate", 'DECIMATE')
 dec.ratio = min(1.0, WOOL_TRI_TARGET / tris(wool))
 print("減面後羊毛：", tris(wool))
