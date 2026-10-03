@@ -34,9 +34,10 @@ wool = bpy.context.active_object
 wool.name = "Wool"                       # 轉換後名字會變，順手改回好認的
 print("轉換後羊毛：", tris(wool))
 
-# 2) 減面：Decimate（Collapse）只保留 15% 的面
+# 2) 減面：Decimate（Collapse）—— 用「目標面數」反推比例，毛變多變少都會落在預算內
+WOOL_TRI_TARGET = 3000
 dec = wool.modifiers.new("Decimate", 'DECIMATE')
-dec.ratio = 0.15
+dec.ratio = min(1.0, WOOL_TRI_TARGET / tris(wool))
 print("減面後羊毛：", tris(wool))
 bpy.ops.object.modifier_apply(modifier=dec.name)   # 套用 = 真的改掉網格
 bpy.ops.object.shade_smooth()

@@ -118,7 +118,10 @@ ellipsoid(HEAD_C + Vector((0, -HEAD_HALF.y * 1.0, -0.03)),  # 臉的窗口（負
           Vector((0.24, 0.16, 0.22)) * FACE_WINDOW, negative=True, stiffness=4.0)
 
 # ---------- 視窗用物件顏色顯示 ----------
-for area in (bpy.context.screen.areas if bpy.context.screen else []):
-    if area.type == 'VIEW_3D':
-        area.spaces.active.shading.color_type = 'OBJECT'
+# 每個分頁（Layout、Scripting…）都有自己的 3D 視窗，全部切到「實心 + 物件顏色」
+for screen in bpy.data.screens:
+    for area in screen.areas:
+        if area.type == 'VIEW_3D':
+            area.spaces.active.shading.type = 'SOLID'
+            area.spaces.active.shading.color_type = 'OBJECT'
 print("小羊 v3 完成")

@@ -63,8 +63,8 @@ for s in (1, -1):
     sphere("Eye",      face(0.12 * s,         -0.245, 0.02),  Vector((0.055, 0.03, 0.075)) * f, (0, 0, 22 * s), INK)
     sphere("EyeShine", face(0.12 * s - 0.025, -0.275, 0.055), Vector((0.02, 0.012, 0.02)) * f,  (0, 0, 22 * s), WHITE)
     sphere("Cheek",    face(0.20 * s,         -0.20, -0.08),  Vector((0.05, 0.015, 0.035)) * f, (0, 0, 42 * s), BLUSH)
-    sphere("Ear",      face(0.42 * s,  0.03, 0.04),  Vector((0.15, 0.07, 0.06)) * f,  (0, 30 * s, -15 * s), FACE)
-    sphere("EarInner", face(0.43 * s, -0.01, 0.03),  Vector((0.11, 0.03, 0.035)) * f, (0, 30 * s, -15 * s), INNER)
+    sphere("Ear",      face(0.40 * s, -0.12, -0.10),  Vector((0.15, 0.07, 0.06)) * f,  (0, 30 * s, -15 * s), FACE)
+    sphere("EarInner", face(0.41 * s, -0.16, -0.11),  Vector((0.11, 0.03, 0.035)) * f, (0, 30 * s, -15 * s), INNER)
 sphere("Nose",      face(0, -0.278, -0.052), Vector((0.032, 0.018, 0.020)) * f, color=INK)
 sphere("Mouth",     face(0, -0.268, -0.098), Vector((0.028, 0.012, 0.008)) * f, color=INK)
 sphere("MouthLine", face(0, -0.274, -0.075), Vector((0.005, 0.006, 0.02)) * f,  color=INK)
@@ -76,27 +76,32 @@ for s in (1, -1):
         cylinder("Hoof", (LEG_X * s, y, 0.035), LEG_R + 0.006, 0.07, INK)
 
 # ---------- 新技巧：用曲線做捲角 ----------
+HORN_CENTER = (0.40, 0.08, 0.06)   # 螺旋中心（幼體臉座標）：在毛帽「外面」的頭側
+HORN_R0 = 0.17                     # 第一圈的半徑
+HORN_TURNS = 1.25                  # 捲幾圈
+
 def horn(side):
     """羊角 = 一條沿著「螺旋」走的曲線，再給它粗細（bevel）。
-    螺旋：角度 θ 一直轉，半徑 r 一直縮 → 越捲越小；同時慢慢往外（x）移，才不會捲回頭裡。"""
+    螺旋：角度 θ 一直轉，半徑 r 一直縮 → 越捲越小。
+    角根貼在毛帽表面，之後很快往外（x）移出來，整個螺旋「貼在頭的側面」而不是插進頭裡。"""
     cu = bpy.data.curves.new("Horn", 'CURVE')
     cu.dimensions = '3D'
-    cu.bevel_depth = 0.075 * f          # 角的粗細（根部）
+    cu.bevel_depth = 0.07 * f           # 角的粗細（根部）
     cu.bevel_resolution = 3              # 截面的圓滑度
-    cu.resolution_u = 8                  # 沿著曲線的圓滑度
+    cu.resolution_u = 6                  # 沿著曲線的圓滑度
     cu.use_fill_caps = True              # 末端封口
     sp = cu.splines.new('POLY')
-    N = 24
+    N = 28
     sp.points.add(N - 1)
-    turns, R0 = 1.2, 0.20 * f
-    center = face(0.32 * side, 0.0, 0.14)          # 螺旋中心：頭兩側、耳朵上方偏後（要在毛帽外面）
+    cx, cy, cz = HORN_CENTER
     for i in range(N):
         t = i / (N - 1)
-        theta = math.radians(140) - t * turns * 2 * math.pi  # 從頭頂偏前（埋在毛裡）開始，往後、往下、再往前捲
-        r = R0 * (1 - 0.65 * t)
-        p = center + Vector((side * (0.10 * t - 0.06) * f, r * math.cos(theta), r * math.sin(theta)))
+        theta = math.radians(100) - t * HORN_TURNS * 2 * math.pi   # 頭頂 → 往後 → 往下 → 往前捲
+        r = HORN_R0 * (1 - 0.7 * t)
+        x = cx - 0.12 * (1 - t) ** 3                                 # 角根埋進毛帽，很快就移到頭的外側
+        p = face(x * side, cy + r * math.cos(theta), cz + r * math.sin(theta))
         sp.points[i].co = (p.x, p.y, p.z, 1)
-        sp.points[i].radius = 1.0 - 0.75 * t      # 越往末端越細
+        sp.points[i].radius = 1.0 - 0.7 * t      # 越往末端越細
     o = bpy.data.objects.new("Horn", cu)
     bpy.context.scene.collection.objects.link(o)
     o.color = HORN
@@ -135,13 +140,17 @@ def ring(center, half, z_frac, count, r, offset=0.0):
         if not in_face_window(p):
             ball(p, r)
 
-# 1) 身體：同樣三圈花邊，身體變長了，每圈多放幾顆
-ellipsoid(BODY_C, BODY_HALF)
-ring(BODY_C, BODY_HALF, 0.55, 12, 0.11, offset=0.5)
-ring(BODY_C, BODY_HALF, 0.0, 14, 0.12)
-ring(BODY_C, BODY_HALF, -0.5, 12, 0.11, offset=0.5)
-ball(BODY_C + Vector((0, 0, BODY_HALF.z)), 0.13)
-ball(BODY_C + Vector((0, BODY_HALF.y, 0.08)), 0.10)          # 尾巴
+# 1) 身體：成體的毛更蓬——花邊的毛球更大、多一圈，背上再加一排
+WOOL_PUFF = 1.12   # 毛比身體膨多少（幼體 1.0）
+BH = BODY_HALF * WOOL_PUFF
+ellipsoid(BODY_C, BH)
+ring(BODY_C, BH, 0.75, 8, 0.15)
+ring(BODY_C, BH, 0.40, 12, 0.16, offset=0.5)
+ring(BODY_C, BH, 0.0, 14, 0.17)
+ring(BODY_C, BH, -0.45, 12, 0.15, offset=0.5)
+for y in (-0.25, 0.0, 0.25):                                 # 背脊一排大毛球
+    ball(BODY_C + Vector((0, BH.y * y * 2, BH.z * 0.95)), 0.17)
+ball(BODY_C + Vector((0, BH.y, 0.08)), 0.11)                 # 尾巴
 
 # 2) 新：脖子——從身體前上方連到頭後方，一串漸漸變小的毛球
 neck_from = BODY_C + Vector((0, -BODY_HALF.y * 0.55, BODY_HALF.z * 0.55))
@@ -156,7 +165,10 @@ for zf, n, off in ((0.8, 6, 0.0), (0.45, 10, 0.5), (0.0, 12, 0.0), (-0.5, 10, 0.
     ring(HEAD_C, HEAD_HALF * HOOD_PUFF, zf, n, 0.075 * f, off)
 ellipsoid(face(0, -0.276, -0.03), Vector((0.24, 0.16, 0.22)) * FACE_WINDOW * f, negative=True, stiffness=4.0)
 
-for area in (bpy.context.screen.areas if bpy.context.screen else []):
-    if area.type == 'VIEW_3D':
-        area.spaces.active.shading.color_type = 'OBJECT'
+# 每個分頁（Layout、Scripting…）都有自己的 3D 視窗，全部切到「實心 + 物件顏色」
+for screen in bpy.data.screens:
+    for area in screen.areas:
+        if area.type == 'VIEW_3D':
+            area.spaces.active.shading.type = 'SOLID'
+            area.spaces.active.shading.color_type = 'OBJECT'
 print("小羊成體完成")

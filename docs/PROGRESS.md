@@ -18,7 +18,7 @@
   - [x] 小羊幼體造型定稿（Blender 程序化腳本 `art/blender/lamb_baby.py`，2026-10-02）
   - [x] 收尾腳本 `art/blender/finalize_export.py`：轉網格／減面、頂點色配色遮罩、合併、匯出 FBX（小羊幼體約 6.8k 三角形）
   - [x] GDD §3.4、§7.2 改為頂點色遮罩；花紋改為「隨成長出現」的花紋遮罩貼圖（2026-10-02）
-  - [x] 小羊成體造型腳本 `art/blender/lamb_adult.py`（脖子、長腿、曲線捲角；全身約 7.9k 三角形）
+  - [x] 小羊成體造型腳本 `art/blender/lamb_adult.py`（脖子、長腿、更蓬的毛、貼在頭側的螺旋捲角；全身約 7.9k 三角形）
   - [ ] 花紋貼圖（展 UV）；小獅幼體／成體；Unity 端讀頂點色的 toon 著色器
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [ ] P1 平台端（於 `kingdom-little-leaders` repo）：migration＋RLS、家長服事卡頁、鼓勵話語、連結
