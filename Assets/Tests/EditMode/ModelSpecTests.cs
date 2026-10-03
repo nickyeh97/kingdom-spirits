@@ -49,6 +49,14 @@ namespace SpiritBeast.Tests
         }
 
         [Test]
+        public void UnreadableMask_IsNotASpecProblem()
+        {
+            var m = Good(); m.MaskReadable = false; m.PrimaryVertices = 0;
+            Assert.That(Worst(m), Is.EqualTo(SpecLevel.Ok), "沒開 Read/Write 只是無法逐點檢查");
+            Assert.That(ModelSpecRules.Check(m).Any(f => f.Message.Contains("Read/Write")), Is.True);
+        }
+
+        [Test]
         public void AmbiguousAlpha_IsWarning()
         {
             var m = Good(); m.AmbiguousVertices = 12;

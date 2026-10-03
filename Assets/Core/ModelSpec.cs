@@ -20,7 +20,7 @@ namespace SpiritBeast.Core
         public int FixedVertices { get; set; }
         /// <summary>A 不是 0 也不是 1 的頂點：通常是匯出時被轉了色彩空間或做了平滑</summary>
         public int AmbiguousVertices { get; set; }
-        /// <summary>頂點色讀不到時為 false（網格未開 Read/Write 且不在編輯器）</summary>
+        /// <summary>頂點色數值讀不到時為 false（網格未開 Read/Write）</summary>
         public bool MaskReadable { get; set; } = true;
         /// <summary>模型放在原點、不旋轉不縮放時的外框（公尺）</summary>
         public float Height { get; set; }
@@ -73,7 +73,9 @@ namespace SpiritBeast.Core
             if (m.MeshesWithoutVertexColor > 0)
                 list.Add(new SpecFinding(SpecLevel.Error, $"{m.MeshesWithoutVertexColor} 個網格沒有頂點色，無法換色（匯出前要跑 finalize_export.py 寫入 Mask）"));
             else if (!m.MaskReadable)
-                list.Add(new SpecFinding(SpecLevel.Warning, "讀不到頂點色數值（請在編輯器 Play 模式檢查）"));
+                // 不是規格問題：FBX 預設不開 Read/Write（遊戲也不需要），只是這裡無法逐點檢查
+                list.Add(new SpecFinding(SpecLevel.Ok,
+                    "有頂點色遮罩（未開 Read/Write，略過數值檢查；要檢查請在 FBX 的 Import Settings → Model 勾 Read/Write）"));
             else
             {
                 if (m.PrimaryVertices == 0)

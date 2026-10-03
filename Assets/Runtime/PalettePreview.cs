@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using SpiritBeast.Core;
-using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -40,11 +39,20 @@ namespace SpiritBeast.Runtime
             }
 
             var shader = Shader.Find("SpiritBeast/PaletteMask");
-            _measure = Measure(Model);
-            _findings = ModelSpecRules.Check(_measure);
+            // 量測失敗也照樣顯示 8 組配色：檢查是輔助，預覽才是主要用途
+            try
+            {
+                _measure = Measure(Model);
+                _findings = ModelSpecRules.Check(_measure);
+            }
+            catch (System.Exception e)
+            {
+                _measure = new ModelMeasure { Name = Model.name, Height = 1f, Width = 1f, Depth = 1f };
+                _findings = new[] { new SpecFinding(SpecLevel.Error, "量測失敗：" + e.Message) };
+            }
             Debug.Log($"[配色預覽] {Model.name}\n" + string.Join("\n", _findings));
 
-            _spacing = Mathf.Max(_measure.Width, _measure.Depth, 0.3f) * 1.5f;
+            _spacing = Mathf.Max(_measure.Width, _measure.Depth, 0.3f) * 1.4f;
             for (int i = 0; i < Catalog.Palettes.Count; i++)
             {
                 var clone = Instantiate(Model, transform);
@@ -65,21 +73,28 @@ namespace SpiritBeast.Runtime
                 r.sharedMaterials = Enumerable.Repeat(mat, Mathf.Max(1, r.sharedMaterials.Length)).ToArray();
         }
 
-        /// <summary>單看時只顯示一隻並拉近；全部時排成 4×2</summary>
+        /// <summary>
+        /// 全部：4 隻一排、上下兩排（第 1–4 組在上），全部面向鏡頭；單看：只留一隻。
+        /// 鏡頭距離依寬、高兩個方向都放得下來算。
+        /// </summary>
         void Layout()
         {
+            if (_measure == null) return;   // 沒指定模型時沒有東西可排
+            float h = Mathf.Max(_measure.Height, 0.3f);
+            float rowGap = h * 1.35f;
             for (int i = 0; i < _clones.Count; i++)
             {
-                bool show = _focus < 0 || _focus == i;
-                _clones[i].SetActive(show);
-                var pos = _focus < 0 ? new Vector3((i % 4 - 1.5f) * _spacing, 0f, (i / 4) * _spacing) : Vector3.zero;
-                _clones[i].transform.localPosition = pos;
+                _clones[i].SetActive(_focus < 0 || _focus == i);
+                _clones[i].transform.localPosition = _focus < 0
+                    ? new Vector3((i % 4 - 1.5f) * _spacing, i < 4 ? rowGap : 0f, 0f)
+                    : Vector3.zero;
             }
-            float h = Mathf.Max(_measure != null ? _measure.Height : 1f, 0.3f);
-            float span = _focus < 0 ? _spacing * 4.2f : Mathf.Max(h, _spacing) * 1.6f;
-            float dist = span * 0.5f / Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Max(_camera.aspect, 0.6f);
-            var center = new Vector3(0f, h * 0.5f, _focus < 0 ? _spacing * 0.5f : 0f);
-            _camera.transform.position = center + new Vector3(0f, h * 0.6f, -dist);
+            float width = _focus < 0 ? _spacing * 4f : _spacing;
+            float height = _focus < 0 ? rowGap + h : h;
+            float tanHalf = Mathf.Tan(_camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            float dist = Mathf.Max(height * 0.5f / tanHalf, width * 0.5f / (tanHalf * _camera.aspect)) * 1.25f;
+            var center = new Vector3(0f, height * 0.5f, 0f);
+            _camera.transform.position = center + new Vector3(0f, h * 0.15f, -dist);
             _camera.transform.LookAt(center);
         }
 
@@ -94,9 +109,15 @@ namespace SpiritBeast.Runtime
         static ModelMeasure Measure(GameObject model)
         {
             var go = Instantiate(model);
+            try { return MeasureInstance(go, model.name); }
+            finally { go.SetActive(false); Destroy(go); }
+        }
+
+        static ModelMeasure MeasureInstance(GameObject go, string name)
+        {
             go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             go.transform.localScale = Vector3.one;
-            var m = new ModelMeasure { Name = model.name };
+            var m = new ModelMeasure { Name = name };
             var materials = new HashSet<Material>();
             Bounds? bounds = null;
 
@@ -114,15 +135,10 @@ namespace SpiritBeast.Runtime
                 for (int sub = 0; sub < mesh.subMeshCount; sub++) m.Triangles += (int)(mesh.GetIndexCount(sub) / 3);
 
                 if (!mesh.HasVertexAttribute(VertexAttribute.Color)) { m.MeshesWithoutVertexColor++; continue; }
-                if (!mesh.isReadable && !Application.isEditor) { m.MaskReadable = false; continue; }
-                // AcquireReadOnlyMeshData 在編輯器裡讀得到沒開 Read/Write 的 FBX 網格
-                using (var data = Mesh.AcquireReadOnlyMeshData(mesh))
-                {
-                    var colors = new NativeArray<Color>(data[0].vertexCount, Allocator.Temp);
-                    data[0].GetColors(colors);
-                    foreach (var c in colors) CountMask(m, c);
-                    colors.Dispose();
-                }
+                // 頂點色數值要網格開 Read/Write 才讀得到（編輯器 Play 模式也一樣，會拋 InvalidOperationException）。
+                // 沒開就只略過數值檢查；換色在 GPU 上做，不受影響
+                if (!mesh.isReadable) { m.MaskReadable = false; continue; }
+                foreach (var c in mesh.colors) CountMask(m, c);
             }
 
             m.MaterialCount = materials.Count;
