@@ -20,11 +20,29 @@
    各檔案的 `.meta` 與 `ProjectSettings/*.asset`——**這些要 commit**（`.meta` 記錄資產 GUID，漏了會讓引用斷掉）。
 3. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
 
+## Supabase 設定（一次性）
+
+遊戲直接讀寫牧區平台的 Supabase。把平台 `.env.local` 的兩個值填進 `Assets/Resources/supabase.json` 並 commit：
+
+```json
+{
+  "url": "（VITE_SUPABASE_URL 的值）",
+  "anonKey": "（VITE_SUPABASE_ANON_KEY 的值）"
+}
+```
+
+- 兩個都是公開值（平台網頁本來就帶著它們），安全邊界是資料庫 RLS；**不要**放 service role key。
+- 檔案還是範本值時，遊戲會顯示「遊戲設定尚未完成」。
+- 資料表與 RLS 由平台 repo 的 migration `2026-10-02_service_card.sql` 建立，要先在 Supabase 執行。
+
 ## 測試
 
 ```bash
 # 純 C# 核心（Assets/Core）：不需要開 Unity，幾秒跑完
 dotnet test Tools/CoreTests
+
+# Runtime 編譯檢查：用 NuGet 的 UnityEngine 參考組件編譯 Core＋Runtime（不需要 Unity 授權）
+dotnet build Tools/RuntimeCompileCheck
 
 # 同一批測試在 Unity 裡跑（EditMode）
 "$UNITY" -batchmode -nographics -projectPath . \
@@ -60,13 +78,50 @@ npx --yes serve Builds/Web
 測授權交接可開 `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301`，
 畫面左上應顯示 `Fragment OK child=3f2504e0...`，且網址列的 `#…` 會立刻消失。
 
+## 本機端到端測試（G1 起）
+
+不必部署，也能從平台一路點進遊戲：
+
+1. 平台 repo 的 `.env.local` 加一行 `VITE_SPIRIT_GAME_URL=http://localhost:3000`，執行 `npm run dev`。
+2. 本 repo 建置 Web 後執行 `npx --yes serve Builds/Web`（預設 3000 埠）。
+3. 用**已審核、綁定兒童班或幼童班孩子**的家長帳號登入平台 →「我的 → 小領袖靈獸」→ 會跳到遊戲。
+4. 驗收：第一次相遇選靈獸 → 主畫面 → ＋1 服事（家長確認 → 項目 → 果子 → 儲存）→ 慶祝畫面；
+   第 4 次服事時會進化。回平台再開一次，紀錄與外觀都還在。
+5. RLS 驗收：把網址片段的 `child=` 換成別人孩子的 id，應顯示「找不到這位孩子的資料」。
+
+### 編輯器 Play 模式
+
+在啟動 Unity 前設定環境變數 `SPIRIT_DEV_FRAGMENT`（值為 `at=<access token>&child=<孩子 id>`），
+按 Play 就會用這組身分讀資料。access token 可從平台的瀏覽器開發者工具 → Application →
+Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時過期。**不要 commit 或分享這個值。**
+
+## 美術檢查：配色預覽
+
+匯入靈獸 FBX 後，在 Project 視窗選取它 → 選單「**Spirit Beast/配色預覽（選取的模型）**」，
+會開一個不存檔的暫存場景並自動 Play：
+
+- 上方 8 個色票：點一個單看那組配色，「全部」把 8 組排成 4×2；可暫停轉動、轉向 180°（確認模型正面朝哪）
+- 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
+- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
+- 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
+
+## 中文字型
+
+WebGL 沒有系統字型，介面用的是 `Assets/Resources/Fonts/NotoSansTC-Subset.ttf`（程式用到的字＋Big5 常用 5401 字）。
+**新增中文文案後要重新產生**，否則新字會顯示成方塊：
+
+```bash
+pip install fonttools
+python3 Tools/subset-font.py <NotoSansTC-Medium.ttf 路徑>   # 原始字型下載網址見腳本開頭
+```
+
 ## CI（GitHub Actions）
 
 `.github/workflows/ci.yml` 有三個 job：
 
 | Job | 內容 | 需要的 Secrets |
 | --- | --- | --- |
-| `core-tests` | `dotnet test`，每次必跑 | 無 |
+| `core-tests` | `dotnet test`（台灣時區）＋ Runtime 編譯檢查，每次必跑 | 無 |
 | `unity` | Unity EditMode 測試＋Web 建置，產物上傳為 artifact `web` | `UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD` |
 | `deploy` | 僅 push 到 `main`：把建置結果部署到 Vercel | `VERCEL_TOKEN`、`VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`（＋上面的 Unity 授權） |
 
