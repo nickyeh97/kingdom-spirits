@@ -63,14 +63,16 @@ INK   = (0.02, 0.02, 0.03, 0)   # 眼睛、鼻子、嘴、蹄
 WHITE = (1, 1, 1, 0)            # 眼睛反光
 HORN  = (0.85, 0.70, 0.45, 0)   # 羊角：固定的象牙色（若放進點綴色槽，會跟臉頰同色）
 GOLD  = (0.95, 0.76, 0.30, 0)   # 金扣、角環
+LINING = (0.70, 0.12, 0.16, 0)  # 披風立領內裡
 
 SLOT = {
     "Wool": PRIMARY,
     "Head": SECONDARY, "Ear": SECONDARY, "Leg": SECONDARY,
     "Cheek": ACCENT, "EarInner": ACCENT,
     "Horn": HORN,
-    "Cape": ACCENT, "CapeStrap": ACCENT,           # 小領袖披風：跟著配色換
-    "Clasp": GOLD, "HornBand": GOLD,               # 金扣、角環：固定金色
+    "Cape": ACCENT, "Capelet": ACCENT,             # 小領袖披風、肩披：跟著配色換
+    "CapeCollar": LINING,                          # 立領內裡：固定紅
+    "Clasp": GOLD, "CapeCord": GOLD, "HornBand": GOLD,   # 金扣、飾繩、角環：固定金色
     "Eye": INK, "Nose": INK, "Mouth": INK, "MouthLine": INK, "Hoof": INK,
     "EyeShine": WHITE,
 }
