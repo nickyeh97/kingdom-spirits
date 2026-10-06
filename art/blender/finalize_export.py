@@ -89,6 +89,16 @@ for o in bpy.data.objects:
     attr = mesh.color_attributes.new("Mask", 'FLOAT_COLOR', 'CORNER')
     for c in attr.data:
         c.color = SLOT[base]
+    # 內襯：造型腳本標了 lining = 1 的面，改用「同一個色槽 × 0.45」。
+    # 公式是 R×主色 + G×副色 + B×點綴色，所以通道值給 0.45 就是那個顏色的 45% 亮度＝深色系，
+    # 不用新增色槽，換配色時內襯也會自動變成新顏色的深色。
+    if "lining" in mesh.attributes and SLOT[base][3] == 1:
+        dark = tuple(v * 0.45 for v in SLOT[base][:3]) + (1,)
+        lining = mesh.attributes["lining"].data
+        for poly in mesh.polygons:
+            if lining[poly.index].value:
+                for li in poly.loop_indices:
+                    attr.data[li].color = dark
 
 # ---------- 2) 合併：除了嘴以外全部合成一個網格 ----------
 mouth = bpy.data.objects["Mouth"]

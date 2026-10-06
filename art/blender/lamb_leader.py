@@ -42,7 +42,7 @@ for mb in list(bpy.data.metaballs):
 for cu in list(bpy.data.curves):
     bpy.data.curves.remove(cu)
 bpy.context.scene["spirit_name"] = "Lamb_Leader"   # 給收尾腳本用的輸出名稱
-bpy.context.scene["wool_tri_target"] = 2400        # 多了披風和角環，羊毛少用 600 面，全身才能維持在 8000 以內
+bpy.context.scene["wool_tri_target"] = 2300        # 多了披風和角環，羊毛少用 700 面，全身才能維持在 8000 以內
 # 小零件（金扣、反光、腮紅、鼻子）用低解析度球（seg=10, rings=6）：手機上看不出差別，一顆省 124 面
 
 def put(o, name, scale, rot_deg, color):
@@ -247,30 +247,34 @@ ellipsoid(face(0, -0.276, -0.03), Vector((0.24, 0.16, 0.22)) * FACE_WINDOW * f, 
 #   之後換別的動物，只要換外殼，同一套披風就能穿上去。
 import bmesh
 neck_c = neck_from.lerp(neck_to, 0.10)                  # 披風掛在脖子根部
-OPEN = 34          # 正面開口的半角（度）：0 = 整圈包住，越大胸口露越多
+OPEN = 22          # 領口處，正面開口的半角（度）
+SLANT = 55         # 往下時開口再張開多少度 → 前襟是「斜開」的 A 字，不是垂直的兩片
 CAPE_DROP = 0.42   # 披風垂多長
+COLLAR_R = 0.22    # 領口的大小
 
 def collar_ring(phi, r):
     """脖子根部的一圈：phi=0 在背後（+Y），±180 在正前方。"""
     return neck_c + Vector((r * 0.95 * math.sin(phi), r * math.cos(phi), 0.02))
 
-def drape(name, v_max, offset, nu=18, nv=7):
+def edge_limit(v):
+    """前襟邊緣的角度：領口處開口小，越往下開口越大（斜線）。"""
+    return math.radians(180 - OPEN - SLANT * v)
+
+def drape(name, v_max, offset, nu=20, nv=7):
     bm = bmesh.new()
     grid = []
-    lim = math.radians(180 - OPEN)
     for j in range(nv + 1):
         v = v_max * j / nv
+        lim = edge_limit(v)
         row = []
         for i in range(nu + 1):
             phi = -lim + 2 * lim * i / nu
-            back = (1 + math.cos(phi)) / 2                       # 背後 1、正面 0：背後拖得比較長
-            # 關鍵：布的「草稿」故意做得比身體小（在外殼裡面），
-            # Shrinkwrap 才會把每一點都推到表面上 → 整片貼身。
-            # 若草稿張得比外殼大，那些點在外面不會被推，就會像翅膀一樣翹出去。
-            reach = 0.22 + 0.22 * v
-            p = collar_ring(phi, reach)
-            p.z -= CAPE_DROP * v * (1.0 - 0.3 * back)            # 正面兩片垂得比較直
-            p.y += 0.55 * v * back                               # 背後的布沿著背往尾巴方向蓋
+            back = (1 + math.cos(phi)) / 2                       # 背後 1、正面 0
+            # 布的「草稿」故意做得比身體小（在外殼裡面），Shrinkwrap 才會把每一點都推到表面上；
+            # 若草稿比外殼大，那些點在外面不會被推，就會像翅膀一樣翹出去。
+            p = collar_ring(phi, COLLAR_R + 0.22 * v)
+            p.z -= CAPE_DROP * v * (1.0 - 0.3 * back)
+            p.y += 0.75 * v * back                               # 背後的布沿著背一路蓋到尾巴前
             row.append(bm.verts.new(p))
         grid.append(row)
     for j in range(nv):
@@ -295,17 +299,28 @@ def drape(name, v_max, offset, nu=18, nv=7):
     for m in list(o.modifiers):                                  # 之後要合併網格，modifier 直接套用
         bpy.ops.object.modifier_apply(modifier=m.name)
     bpy.ops.object.shade_smooth()
+    mark_lining(o)
     return o
 
-# 外殼：身體＋毛的輪廓（只拿來包覆，用完就刪）
+def mark_lining(o):
+    """內襯：面朝身體內側的面標記 lining = 1，收尾腳本會把它們上成「披風色的深色」。
+    判斷方式：面的法線 n 與「從身體中心指向這個面」的方向相反 → 朝內。"""
+    me = o.data
+    attr = me.attributes.new("lining", 'INT', 'FACE')
+    ref = BODY_C + Vector((0, -0.25, 0.15))
+    for poly in me.polygons:
+        attr.data[poly.index].value = 1 if poly.normal.dot(poly.center - ref) < 0 else 0
+
+# 外殼：身體＋毛＋尾巴的輪廓（只拿來包覆，用完就刪）
+# 外殼一定要「比毛大」：上一版太小，背上的毛球從披風裡穿出來，像禿了一塊。
 hmb = bpy.data.metaballs.new("Hull")
 hmb.resolution = 0.05
 hmb.threshold = 0.6
 e = hmb.elements.new(type='ELLIPSOID')
 e.co, e.radius, e.stiffness = BODY_C, 0.3, 2.0
-e.size_x, e.size_y, e.size_z = (BODY_HALF + Vector((0.13, 0.13, 0.13))) / (0.3 * K)
+e.size_x, e.size_y, e.size_z = (BODY_HALF + Vector((0.19, 0.19, 0.19))) / (0.3 * K)
 e = hmb.elements.new(type='BALL')
-e.co, e.radius = neck_c, 0.30 / K                                # 脖子＋毛領
+e.co, e.radius = neck_c, 0.32 / K                                # 脖子＋毛領
 hull = bpy.data.objects.new("Hull", hmb)
 bpy.context.scene.collection.objects.link(hull)
 bpy.ops.object.select_all(action='DESELECT')
@@ -313,27 +328,42 @@ hull.select_set(True); bpy.context.view_layer.objects.active = hull
 bpy.ops.object.convert(target='MESH')
 hull = bpy.context.active_object
 
-cape = drape("Cape", 1.0, 0.015)                                 # 主披風
+cape = drape("Cape", 1.0, 0.02)                                  # 主披風
 cape.color = CAPE
-capelet = drape("Capelet", 0.32, 0.05, nv=3)                     # 肩披：短的第二層，疊在主披風上
+capelet = drape("Capelet", 0.30, 0.055, nv=3)                    # 肩披：短的第二層，疊在主披風上
 capelet.color = CAPE
-bpy.data.objects.remove(hull)
 
-# 立領：脖子根部一圈短短的布，內裡用對比色（參考圖的紅色立領）
-bpy.ops.mesh.primitive_cone_add(vertices=20, radius1=0.31, radius2=0.35, depth=0.10,
-                                end_fill_type='NOTHING', location=neck_c + Vector((0, 0.0, 0.08)))
-col = bpy.context.active_object
-col.rotation_euler = (math.radians(-18), 0, 0)                   # 跟著脖子往前傾
-col.name = "CapeCollar"; col.color = LINING
-so = col.modifiers.new("Solidify", 'SOLIDIFY'); so.thickness = 0.02
+# 立領：鑲在披風的領口上——直接從肩披最上面那一圈「往上長」出一條帶子，
+# 所以兩者一定接得剛好；角度範圍也跟前襟一樣，正面同樣是開口的。
+# 位置從 Shrinkwrap 之後的肩披網格上拿：第一排頂點就是領口。
+me = capelet.data
+nu = 20
+top = [capelet.matrix_world @ me.vertices[i].co for i in range(nu + 1)]   # 草稿的第一排 = 領口
+bm = bmesh.new()
+lower = [bm.verts.new(p) for p in top]
+upper = []
+for p in top:
+    out = Vector((p.x - neck_c.x, p.y - neck_c.y, 0)).normalized()
+    upper.append(bm.verts.new(p + Vector((0, 0, 0.09)) + out * 0.025))  # 往上、略往外翻
+for i in range(nu):
+    bm.faces.new((lower[i], lower[i + 1], upper[i + 1], upper[i]))
+me2 = bpy.data.meshes.new("CapeCollar")
+bm.to_mesh(me2); bm.free()
+col = bpy.data.objects.new("CapeCollar", me2)
+bpy.context.scene.collection.objects.link(col)
+bpy.ops.object.select_all(action='DESELECT')
+col.select_set(True); bpy.context.view_layer.objects.active = col
+so = col.modifiers.new("Solidify", 'SOLIDIFY'); so.thickness = 0.018
 bpy.ops.object.modifier_apply(modifier=so.name)
 bpy.ops.object.shade_smooth()
+col.color = LINING
 
-# 金扣＋飾繩：開口兩側各一顆金扣，中間垂一條弧形的金繩，右邊再掛兩條流蘇
-lim = math.radians(180 - OPEN)
-btn = [collar_ring(lim * s, 0.36) + Vector((0, -0.03, -0.10)) for s in (1, -1)]
-for p in btn:
-    sphere("Clasp", p, Vector((0.035, 0.022, 0.035)), color=GOLD, seg=10, rings=6)
+# 金扣：釘在披風「兩端」——也就是領口的左右兩個角
+corners = [top[0], top[nu]]
+for p in corners:
+    out = Vector((p.x - neck_c.x, p.y - neck_c.y, 0)).normalized()
+    sphere("Clasp", p + out * 0.03 + Vector((0, 0, -0.02)), Vector((0.035, 0.035, 0.035)), color=GOLD, seg=10, rings=6)
+bpy.data.objects.remove(hull)
 
 def cord(name, pts, thick):
     cu = bpy.data.curves.new(name, 'CURVE')
@@ -350,19 +380,20 @@ def cord(name, pts, thick):
     o.color = GOLD
     return o
 
-for sag in (0.10, 0.16):                                         # 兩條垂度不同的金繩（懸鏈的樣子）
+btn = [p + Vector((0, -0.03, -0.02)) for p in corners]
+for sag in (0.09, 0.15):                                         # 兩條垂度不同的金繩，掛在兩顆金扣之間
     pts = []
     for i in range(11):
         t = i / 10
         p = btn[0].lerp(btn[1], t)
         p.z -= sag * 4 * t * (1 - t)                             # 拋物線：中間最低
-        p.y -= 0.06 * 4 * t * (1 - t)                            # 中間往前一點，不要穿進胸口
+        p.y -= 0.07 * 4 * t * (1 - t)                            # 中間往前一點，不要穿進胸口
         pts.append(p)
     cord("CapeCord", pts, 0.009)
-for dx in (0.0, 0.035):                                          # 流蘇：從右邊的扣子垂下來
-    top = btn[1] + Vector((dx, -0.02, -0.02))
-    cord("CapeCord", [top, top + Vector((0, -0.01, -0.16))], 0.007)
-    sphere("Clasp", top + Vector((0, -0.01, -0.18)), Vector((0.016, 0.016, 0.03)), color=GOLD, seg=10, rings=6)
+for dx in (0.0, 0.03):                                           # 流蘇：從其中一顆金扣垂下來
+    t0 = btn[1] + Vector((dx * (1 if btn[1].x > 0 else -1), -0.02, -0.02))
+    cord("CapeCord", [t0, t0 + Vector((0, -0.01, -0.15))], 0.007)
+    sphere("Clasp", t0 + Vector((0, -0.01, -0.17)), Vector((0.016, 0.016, 0.03)), color=GOLD, seg=10, rings=6)
 
 # 每個分頁（Layout、Scripting…）都有自己的 3D 視窗，全部切到「實心 + 物件顏色」
 for screen in bpy.data.screens:
