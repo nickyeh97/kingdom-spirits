@@ -22,6 +22,9 @@ namespace SpiritBeast.Runtime
         bool _turn = true;
         float _facing = 180f;
         float _spacing = 1f;
+        int _view;   // 對應著色器 _View：0 正常、1 遮罩顏色、2 遮罩 A、3 不打光
+        static readonly string[] ViewNames = { "正常", "遮罩顏色", "遮罩A", "不打光" };
+        readonly List<Material> _materials = new List<Material>();
         GUIStyle _style, _label;
         Font _font;
 
@@ -57,13 +60,13 @@ namespace SpiritBeast.Runtime
             {
                 var clone = Instantiate(Model, transform);
                 clone.name = Model.name + "_" + Catalog.Palettes[i].Id;
-                if (shader != null) ApplyPalette(clone, shader, Catalog.Palettes[i]);
+                if (shader != null) _materials.Add(ApplyPalette(clone, shader, Catalog.Palettes[i]));
                 _clones.Add(clone);
             }
             Layout();
         }
 
-        static void ApplyPalette(GameObject go, Shader shader, Palette p)
+        static Material ApplyPalette(GameObject go, Shader shader, Palette p)
         {
             var mat = new Material(shader) { name = "Palette_" + p.Id };
             mat.SetColor("_Primary", Hex(p.Main));
@@ -71,6 +74,7 @@ namespace SpiritBeast.Runtime
             mat.SetColor("_Accent", Hex(p.Accent));
             foreach (var r in go.GetComponentsInChildren<Renderer>())
                 r.sharedMaterials = Enumerable.Repeat(mat, Mathf.Max(1, r.sharedMaterials.Length)).ToArray();
+            return mat;
         }
 
         /// <summary>
@@ -195,6 +199,12 @@ namespace SpiritBeast.Runtime
             float bx = x + (78 + Catalog.Palettes.Count * 50) * s;
             if (GUI.Button(new Rect(bx, y, 80 * s, sw), _turn ? "停止轉動" : "轉動")) _turn = !_turn;
             if (GUI.Button(new Rect(bx + 86 * s, y, 80 * s, sw), "轉向 180°")) _facing = (_facing + 180f) % 360f;
+            // 診斷：全黑時切到「遮罩顏色」——還是全黑＝FBX 頂點色是 0；切到「不打光」有顏色＝光照問題
+            if (GUI.Button(new Rect(bx + 172 * s, y, 120 * s, sw), "顯示：" + ViewNames[_view]))
+            {
+                _view = (_view + 1) % ViewNames.Length;
+                foreach (var m in _materials) m.SetFloat("_View", _view);
+            }
 
             // 規格檢查結果
             float ty = y + sw + 12 * s;

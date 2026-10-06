@@ -12,6 +12,9 @@ Shader "SpiritBeast/PaletteMask"
         _Secondary ("Secondary", Color) = (1, 0.95, 0.90, 1)
         _Accent ("Accent", Color) = (0.95, 0.55, 0.65, 1)
         _Bands ("Toon Bands", Range(1, 6)) = 3
+        _MinLight ("Min Light", Range(0, 1)) = 0.35
+        // 診斷用：0 正常、1 遮罩 RGB 原值、2 遮罩 A（白＝可換色、黑＝固定色）、3 不打光的顏色
+        _View ("Debug View", Float) = 0
     }
     SubShader
     {
@@ -29,6 +32,8 @@ Shader "SpiritBeast/PaletteMask"
             fixed4 _Secondary;
             fixed4 _Accent;
             float _Bands;
+            float _MinLight;
+            float _View;
 
             struct appdata
             {
@@ -55,12 +60,18 @@ Shader "SpiritBeast/PaletteMask"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                if (_View > 0.5 && _View < 1.5) return fixed4(i.mask.rgb, 1);
+                if (_View > 1.5 && _View < 2.5) return fixed4(i.mask.aaa, 1);
+
                 float3 slot = i.mask.r * _Primary.rgb + i.mask.g * _Secondary.rgb + i.mask.b * _Accent.rgb;
                 float3 albedo = lerp(i.mask.rgb, slot, saturate(i.mask.a));
+                if (_View > 2.5) return fixed4(albedo, 1);
+
                 float3 n = normalize(i.normal);
                 float ndl = saturate(dot(n, normalize(_WorldSpaceLightPos0.xyz)));
                 ndl = floor(ndl * _Bands + 0.5) / _Bands;
-                float3 light = _LightColor0.rgb * ndl + ShadeSH9(float4(n, 1));
+                // 卡通風：暗面保留最低亮度，不會整片黑掉（環境光沒算好的新場景也一樣看得到）
+                float3 light = _LightColor0.rgb * ndl + max(ShadeSH9(float4(n, 1)), _MinLight);
                 return fixed4(albedo * light, 1);
             }
             ENDCG
