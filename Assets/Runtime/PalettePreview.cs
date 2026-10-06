@@ -9,10 +9,15 @@ namespace SpiritBeast.Runtime
     /// <summary>
     /// 美術檢查工具：在 Play 模式把一個靈獸模型以 8 組配色並排顯示，並量測規格（GDD §7.2–7.3）。
     /// 由 Editor 選單「Spirit Beast/配色預覽（選取的模型）」建立；場景裡有它時，GameApp 不會啟動。
+    /// Play 中可切換模型：點畫面上的模型按鈕，或在 Project 視窗點選另一個模型（編輯器限定）；
+    /// 從 Blender 重新匯出後按「重新載入」即可看到新版。
     /// </summary>
     public sealed class PalettePreview : MonoBehaviour
     {
+        /// <summary>目前預覽的模型</summary>
         public GameObject Model;
+        /// <summary>可切換的模型（Editor 選單放入同資料夾的模型）</summary>
+        public List<GameObject> Models = new List<GameObject>();
 
         readonly List<GameObject> _clones = new List<GameObject>();
         IReadOnlyList<SpecFinding> _findings = new SpecFinding[0];
@@ -35,11 +40,25 @@ namespace SpiritBeast.Runtime
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color(0.99f, 0.96f, 0.89f);
 
+            Models.RemoveAll(m => m == null);
+            if (Model == null && Models.Count > 0) Model = Models[0];
             if (Model == null)
             {
                 _findings = new[] { new SpecFinding(SpecLevel.Error, "沒有指定模型：請在 Project 視窗選取 FBX 後，從選單「Spirit Beast/配色預覽」開啟") };
                 return;
             }
+            Show(Model);
+        }
+
+        /// <summary>換成另一個模型（或重新載入同一個）：清掉舊的 8 隻，重新量測、套色、排版</summary>
+        public void Show(GameObject model)
+        {
+            foreach (var c in _clones) Destroy(c);
+            foreach (var m in _materials) Destroy(m);
+            _clones.Clear();
+            _materials.Clear();
+            Model = model;
+            if (!Models.Contains(model)) Models.Add(model);
 
             var shader = Shader.Find("SpiritBeast/PaletteMask");
             // 量測失敗也照樣顯示 8 組配色：檢查是輔助，預覽才是主要用途
@@ -60,11 +79,18 @@ namespace SpiritBeast.Runtime
             {
                 var clone = Instantiate(Model, transform);
                 clone.name = Model.name + "_" + Catalog.Palettes[i].Id;
-                if (shader != null) _materials.Add(ApplyPalette(clone, shader, Catalog.Palettes[i]));
+                if (shader != null)
+                {
+                    var mat = ApplyPalette(clone, shader, Catalog.Palettes[i]);
+                    mat.SetFloat("_View", _view);   // 換模型時維持目前的診斷顯示模式
+                    _materials.Add(mat);
+                }
                 _clones.Add(clone);
             }
             Layout();
         }
+
+        static bool IsModel(GameObject go) => go != null && go.GetComponentsInChildren<Renderer>(true).Length > 0;
 
         static Material ApplyPalette(GameObject go, Shader shader, Palette p)
         {
@@ -104,6 +130,12 @@ namespace SpiritBeast.Runtime
 
         void Update()
         {
+#if UNITY_EDITOR
+            // Play 中在 Project 視窗點選另一個模型 → 跟著切換
+            var picked = UnityEditor.Selection.activeObject as GameObject;
+            if (picked != null && picked != Model && UnityEditor.EditorUtility.IsPersistent(picked) && IsModel(picked))
+                Show(picked);
+#endif
             float y = _turn ? Time.time * 30f : 0f;
             foreach (var c in _clones) c.transform.localRotation = Quaternion.Euler(0f, _facing + y, 0f);
         }
@@ -206,8 +238,21 @@ namespace SpiritBeast.Runtime
                 foreach (var m in _materials) m.SetFloat("_View", _view);
             }
 
+            // 模型切換：同資料夾的模型各一顆按鈕，目前的加框；「重新載入」給 Blender 重新匯出後用
+            float my = y + sw + 8 * s, mx = x;
+            for (int i = 0; i < Models.Count; i++)
+            {
+                if (Models[i] == null) continue;
+                var name = Models[i].name;
+                var r = new Rect(mx, my, Mathf.Max(90f, name.Length * 9f + 24f) * s, 34 * s);
+                if (Models[i] == Model) Fill(new Rect(r.x - 3, r.y - 3, r.width + 6, r.height + 6), Color.black);
+                if (GUI.Button(r, name) && Models[i] != Model) Show(Models[i]);
+                mx = r.xMax + 8 * s;
+            }
+            if (Model != null && GUI.Button(new Rect(mx, my, 90 * s, 34 * s), "重新載入")) Show(Model);
+
             // 規格檢查結果
-            float ty = y + sw + 12 * s;
+            float ty = my + 34 * s + 10 * s;
             GUI.Label(new Rect(x, ty, 600 * s, 24 * s), "規格檢查：" + (Model != null ? Model.name : "（未指定）"), _style);
             foreach (var f in _findings)
             {

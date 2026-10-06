@@ -101,6 +101,9 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 會開一個不存檔的暫存場景並自動 Play：
 
 - 上方 8 個色票：點一個單看那組配色，「全部」把 8 組排成 4×2；可暫停轉動、轉向 180°（確認模型正面朝哪）
+- **Play 中切換模型**：同資料夾的模型各有一顆按鈕；或直接在 Project 視窗點另一個模型，預覽會跟著換
+- 從 Blender 重新匯出、Unity 重新匯入後，按「**重新載入**」就能看到新版，不必停 Play
+- 「顯示：…」切換診斷模式：遮罩顏色（頂點色原值）、遮罩A（白＝可換色）、不打光
 - 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
 - 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
 - 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
