@@ -60,7 +60,6 @@ namespace SpiritBeast.Runtime
             Model = model;
             if (!Models.Contains(model)) Models.Add(model);
 
-            var shader = Shader.Find("SpiritBeast/PaletteMask");
             // 量測失敗也照樣顯示 8 組配色：檢查是輔助，預覽才是主要用途
             try
             {
@@ -79,9 +78,9 @@ namespace SpiritBeast.Runtime
             {
                 var clone = Instantiate(Model, transform);
                 clone.name = Model.name + "_" + Catalog.Palettes[i].Id;
-                if (shader != null)
+                var mat = PaletteMaterial.Apply(clone, Catalog.Palettes[i]);
+                if (mat != null)
                 {
-                    var mat = ApplyPalette(clone, shader, Catalog.Palettes[i]);
                     mat.SetFloat("_View", _view);   // 換模型時維持目前的診斷顯示模式
                     _materials.Add(mat);
                 }
@@ -91,17 +90,6 @@ namespace SpiritBeast.Runtime
         }
 
         static bool IsModel(GameObject go) => go != null && go.GetComponentsInChildren<Renderer>(true).Length > 0;
-
-        static Material ApplyPalette(GameObject go, Shader shader, Palette p)
-        {
-            var mat = new Material(shader) { name = "Palette_" + p.Id };
-            mat.SetColor("_Primary", Hex(p.Main));
-            mat.SetColor("_Secondary", Hex(p.Secondary));
-            mat.SetColor("_Accent", Hex(p.Accent));
-            foreach (var r in go.GetComponentsInChildren<Renderer>())
-                r.sharedMaterials = Enumerable.Repeat(mat, Mathf.Max(1, r.sharedMaterials.Length)).ToArray();
-            return mat;
-        }
 
         /// <summary>
         /// 全部：4 隻一排、上下兩排（第 1–4 組在上），全部面向鏡頭；單看：只留一隻。
@@ -201,7 +189,7 @@ namespace SpiritBeast.Runtime
             else m.AmbiguousVertices++;
         }
 
-        static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out var c) ? c : Color.white;
+        static Color Hex(string hex) => PaletteMaterial.Hex(hex);
 
         // ---- 介面 ----
 

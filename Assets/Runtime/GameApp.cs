@@ -23,6 +23,8 @@ namespace SpiritBeast.Runtime
 
         enum Page { Loading, Error, FirstMeet, Home, Card, Wardrobe, Log, Celebrate }
 
+        string _fragment;   // 由 Create 取走一次後交給這裡（jslib 取一次即清空）
+
         Page _page = Page.Loading;
         string _error;
         string _notice;
@@ -54,7 +56,13 @@ namespace SpiritBeast.Runtime
         {
             // 美術檢查用的配色預覽場景不啟動遊戲
             if (FindAnyObjectByType<PalettePreview>() != null) return;
-            new GameObject(nameof(GameApp)).AddComponent<GameApp>();
+            var fragment = SB_TakeAuthFragment();
+            if (DemoMode.Wants(fragment, Application.isEditor))
+            {
+                new GameObject(nameof(DemoApp)).AddComponent<DemoApp>();
+                return;
+            }
+            new GameObject(nameof(GameApp)).AddComponent<GameApp>()._fragment = fragment;
         }
 
         void Start()
@@ -62,7 +70,7 @@ namespace SpiritBeast.Runtime
             SetupCamera();
             _beast = new GameObject("Beast").AddComponent<BeastView>();
 
-            var auth = AuthFragment.Parse(SB_TakeAuthFragment());
+            var auth = AuthFragment.Parse(_fragment);
             var configAsset = Resources.Load<TextAsset>("supabase");
             var config = SupabaseConfig.Parse(configAsset != null ? configAsset.text : null);
             if (!auth.IsValid) { Fail("請從牧區平台的「我的 → 小領袖靈獸」開啟"); return; }

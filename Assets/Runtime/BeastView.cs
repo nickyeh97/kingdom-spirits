@@ -5,8 +5,8 @@ using UnityEngine;
 namespace SpiritBeast.Runtime
 {
     /// <summary>
-    /// G1 占位靈獸：用內建幾何體拼出三種造型，依階段放大並加上特徵。
-    /// G2 會換成正式模型（docs/ART_PIPELINE.md），對外介面維持 Show／Hop／Celebrate。
+    /// 靈獸的 3D 呈現。有正式模型時載入 Resources/Beasts/英文名_形態（BeastForms），以換色材質上色；
+    /// 還沒有模型的變體用內建幾何體拼出占位造型。對外介面一致：Show／Hop／Celebrate／Evolve。
     /// </summary>
     public sealed class BeastView : MonoBehaviour
     {
@@ -28,13 +28,31 @@ namespace SpiritBeast.Runtime
             if (_shader == null) _shader = Shader.Find("Sprites/Default");
         }
 
+        Material _modelMaterial;
+
         public void Show(string variant, string palette, int stage)
         {
             if (_body != null) Destroy(_body.gameObject);
+            if (_modelMaterial != null) Destroy(_modelMaterial);
             _body = new GameObject("Body").transform;
             _body.SetParent(transform, false);
-            Build(variant, Catalog.FindPalette(palette), stage);
-            _body.localScale = Vector3.one * StageScale[Mathf.Clamp(stage, 1, 4) - 1];
+            stage = Mathf.Clamp(stage, 1, 4);
+
+            var v = Catalog.FindVariant(variant);
+            var model = v != null ? Resources.Load<GameObject>(BeastForms.ResourcePath(v.DisplayName, stage)) : null;
+            if (model != null)
+            {
+                var go = Instantiate(model, _body);
+                go.transform.localPosition = Vector3.zero;
+                go.transform.localRotation = Quaternion.identity;
+                _modelMaterial = PaletteMaterial.Apply(go, Catalog.FindPalette(palette));
+                _body.localScale = Vector3.one * BeastForms.Scale(stage);
+            }
+            else
+            {
+                Build(variant, Catalog.FindPalette(palette), stage);
+                _body.localScale = Vector3.one * StageScale[stage - 1];
+            }
         }
 
         public void Hop() => _hopTime = 0f;

@@ -37,7 +37,11 @@ Runtime 以 UnityEngine 參考組件編譯通過；平台端資料表＋RLS＋�
   - [x] 小羊幼體／成體以 Blender 程序化腳本建模（另一分支 `claude/nice-pasteur-ubt4t1` 的 `art/blender/`，尚未合併）
   - [x] 配色遮罩改為頂點色 `Mask`（GDD §7.2，2026-10-02）；Unity 端換色著色器 `SpiritBeast/PaletteMask`
   - [x] 美術檢查工具：配色預覽（8 組並排、單看、轉向）＋自動規格檢查（`ModelSpecRules`，11 項測試）（2026-10-03）
-  - [ ] 小羊實際 FBX 在 Unity 的規格檢查結果（待組長跑配色預覽回報）；FBX 進版控與 `Assets/Art/LICENSES.md`
+  - [x] 小羊幼體／成體／小領袖 FBX 在配色預覽通過規格檢查；幼體全黑原因（多一層小寫 mask 頂點色）以
+        `Tools/fbx_mask_report.py` 定位並修正（2026-10-07）
+  - [x] 離線 Demo（`DemoApp`）：選靈獸（英文名）、8 色、六項服事 ＋1、升等與第 4/12/24 次進化（換幼體→成體→小領袖模型）、
+        還原到初始；編輯器直接 Play 或網頁 `#demo` 進入；BeastView 有正式模型時自動改用模型（2026-10-07）
+  - [ ] 三顆小羊 FBX 移到 `Assets/Art/Resources/Beasts/` 並進版控
   - [ ] 花紋貼圖（展 UV）、骨架與動畫、小獅與鴿子、正式 toon 著色器（描邊）、BeastView 換成正式模型
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [x] P1 平台端第一部分（kingdom-little-leaders v0.6.0，PR #45）：migration＋RLS（本機 Postgres 33 項行為測試全過）、

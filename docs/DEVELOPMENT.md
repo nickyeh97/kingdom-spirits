@@ -95,6 +95,17 @@ npx --yes serve Builds/Web
 按 Play 就會用這組身分讀資料。access token 可從平台的瀏覽器開發者工具 → Application →
 Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時過期。**不要 commit 或分享這個值。**
 
+## 離線 Demo（展演用）
+
+不連平台、不讀寫資料，用來展示「選靈獸 → 選顏色 → 服事 ＋1 → 升等與進化 → 還原」：
+
+- **編輯器**：開 `Assets/Scenes/Main.unity` 直接按 Play（沒設 `SPIRIT_DEV_FRAGMENT` 時就是 Demo）
+- **網頁版**：建置後開 `…/index.html#demo`
+- 第 4、12、24 次服事各進化一次（初生 → 成長 → 茁壯 → 小領袖）；「還原到初始」回到 0 次
+- 靈獸模型放在任一 `Resources` 資料夾的 `Beasts/` 底下，檔名「英文名_形態」：
+  `Lamb_Baby.fbx`（階段 1–2）、`Lamb_Adult.fbx`（階段 3）、`Lamb_Leader.fbx`（階段 4）。
+  建議位置 `Assets/Art/Resources/Beasts/`；找不到模型的變體（目前 Dove、Lion）會用幾何體占位
+
 ## 美術檢查：配色預覽
 
 匯入靈獸 FBX 後，在 Project 視窗選取它 → 選單「**Spirit Beast/配色預覽（選取的模型）**」，

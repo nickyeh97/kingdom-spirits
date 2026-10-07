@@ -94,6 +94,20 @@ namespace SpiritBeast.Core
 
         public static Fruit FindFruit(string name) => Fruits.FirstOrDefault(f => f.Name == name);
 
+        /// <summary>
+        /// 離線 Demo 用的服事項目（與平台 child_service_items 目前的六項一致）。
+        /// 正式遊戲一律讀平台的字典，不用這份。
+        /// </summary>
+        public static readonly IReadOnlyList<ServiceItem> DemoServiceItems = new[]
+        {
+            new ServiceItem("收奉獻", 1, true),
+            new ServiceItem("敬拜-司琴", 2, true),
+            new ServiceItem("敬拜-小樂器", 3, true),
+            new ServiceItem("敬拜-Vocal", 4, true),
+            new ServiceItem("領讀天使-宣言/讀經/禱告", 5, true),
+            new ServiceItem("環境稽核", 6, true),
+        };
+
         /// <summary>成長階段的總服事次數門檻（GDD §3.3）；永不退階</summary>
         public static readonly IReadOnlyList<int> StageThresholds = new[] { 0, 4, 12, 24 };
         public static readonly IReadOnlyList<string> StageNames = new[] { "初生", "成長", "茁壯", "小領袖" };
