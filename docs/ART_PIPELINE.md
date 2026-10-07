@@ -77,6 +77,7 @@ Lion:  a baby lion cub spirit creature with a small soft mane and a gentle smile
 - [ ] 原點在腳底、面向 +Z、比例 1 單位＝1 公尺
 - [ ] 綁骨：四足（Lamb、Lion）共用一套、鳥類（Dove）一套，動畫才能跨變體重用
 - [ ] 匯出 FBX 到 `Assets/Art/Beasts/<id>/`，檔名 `<id>_baby.fbx`、`<id>_adult.fbx`
+- [ ] 匯出後跑 `python3 Tools/fbx_mask_report.py <檔案>.fbx`，Unity 讀到的那一層必須是 Mask、沒有 [錯誤]
 - [ ] 進 Unity 後跑**配色預覽**（選取 FBX →「Spirit Beast/配色預覽（選取的模型）」），規格檢查全部 [OK] 或只剩可接受的 [注意]
 
 ## 6. 什麼叫「成果不好」→ 改買素材

@@ -108,6 +108,15 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
 - 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
 
+**模型在預覽裡全黑或顏色怪**：用 FBX 檢查工具直接讀檔（不用開 Unity 或 Blender，Mac 內建 python3 即可）：
+
+```bash
+python3 Tools/fbx_mask_report.py Assets/Art/Models/*.fbx
+```
+
+它會列出每個網格有哪些頂點色層、**Unity 實際讀的是哪一層**（只讀第一層），以及主色／副色／點綴／固定色的數量；
+「色槽全 0」＝換色後全黑，「多槽混合」＝多半是白色預設值而非 Mask。
+
 ## 中文字型
 
 WebGL 沒有系統字型，介面用的是 `Assets/Resources/Fonts/NotoSansTC-Subset.ttf`（程式用到的字＋Big5 常用 5401 字）。
