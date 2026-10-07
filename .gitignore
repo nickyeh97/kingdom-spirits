@@ -20,10 +20,13 @@
 .idea/
 .vscode/
 *.DS_Store
+mono_crash.*.json
 
 # 純 C# 核心測試（dotnet）
 Tools/CoreTests/bin/
 Tools/CoreTests/obj/
+Tools/RuntimeCompileCheck/bin/
+Tools/RuntimeCompileCheck/obj/
 TestResults/
 results.xml
 artifacts/
