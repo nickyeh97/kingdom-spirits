@@ -33,6 +33,10 @@ This profile holds project-wide decisions for every 3D model in this repository.
 | A = 1, channel = 0.45 | lining: 45% of that slot's colour (darker shade, follows palette swaps) |
 | A = 0 | fixed colour = RGB (ink for eyes/nose/hooves, white eye shine, ivory horns, gold, collar red) |
 
+Slot meaning is per species (Lamb: primary wool, secondary face; Lion: primary body skin, secondary flesh tone, accent fur). The finalize script maps common part names to slots, and a shape script can override any part with `o["mask"] = (R, G, B, A)`; use the override whenever a name means something different for the species.
+
+Growth patterns (pattern mask on UVs, from stage 2): Lion — cub spots on the baby mesh, tabby-cat stripes on grown meshes. Lamb — to be decided.
+
 Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) : RGB`. FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
 
 ## Pipeline and delivery (R11, R12)

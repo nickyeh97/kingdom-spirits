@@ -60,8 +60,16 @@ Write the record in English. Discuss it with the user in their preferred languag
 ## Complete user-facing requirement recap — R04
 
 - Presented to the user: 2026-10-12 (chat, Traditional Chinese).
-- User confirmation: pending.
+- User confirmation 2026-10-12 (faithful English summary):
+  - Q1: option (a) — small crown tuft plus soft cheek ruff.
+  - Q2: approved — whisker pads, triangle nose, "ω" mouth as a separate object.
+  - Q3: baby uses cub spots as its stage-2 pattern; grown forms use tabby-cat-style stripes.
+  - Q4: primary is the body **skin**, not fur; secondary (muzzle, belly, paws, inner ears) must read as a cute flesh tone; fur (tuft, ruff, tail tuft) is accent; blush and pads fixed pink (assistant proposal, not objected).
+  - Q5: paw pads (toe beans) required so they show when the beast waves hello.
+  - Q6: no references; design from real lion-cub features; must share one skeleton with the other quadrupeds.
+  - Rig: not this round; shared skeleton compatibility required.
 
 ## Basis for starting production
 
-- Status: **awaiting confirmation**. No model generated.
+- Status: **confirmed to start** (2026-10-12). Built as Lion_Baby v001.
+- Stage-2 spot pattern texture and adult tabby stripes: later scope (pattern mask on UVs).

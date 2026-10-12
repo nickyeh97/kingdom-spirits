@@ -39,7 +39,9 @@
         腳本＋已驗證 `.blend` 雙交付、Unity／Unreal 匯出；美術設定檔 `art/ART_PROFILE.md`；術語表；CLAUDE.md 改英文正本＋繁中副本（2026-10-12）
   - [x] 小羊三階段 v001 交付：`art/models/Lamb/`（`.blend`＋Unity FBX＋Unreal FBX），重新開檔驗證各 16 項全 PASS；
         三角形 6,824／7,936／7,992；Unity／Unreal 實際匯入 NOT RUN
-  - [ ] 描邊方法與 Unity toon shader（讀 `Mask` 頂點色）；花紋遮罩貼圖；小獅幼體／成體／小領袖
+  - [x] 小獅幼體 v001（`art/blender/lion_baby.py` → `art/models/Lion/`）：頭頂蓬毛＋兩頰軟毛、ω 嘴、肉球；
+        腿的位置與小羊幼體相同（共用四足骨架）；5,856 三角形，驗證 16 項全 PASS（2026-10-12）
+  - [ ] 描邊方法與 Unity toon shader（讀 `Mask` 頂點色）；花紋遮罩貼圖（小獅：幼體斑點、成體虎斑）；小獅成體／小領袖
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [ ] P1 平台端（於 `kingdom-little-leaders` repo）：migration＋RLS（`service_card_entries` 不含聚會日欄位、
       該班老師唯讀）、家長服事卡頁、鼓勵話語、「去看靈獸」連結（僅兒童班／幼童班）

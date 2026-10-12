@@ -37,20 +37,28 @@ for o in [o for o in bpy.data.objects if o.type == 'CURVE']:
     bpy.context.active_object.name = base
 
 # Metaball → 一般網格（Unity 只看得懂網格）
-wool = bpy.data.objects["WoolCloud"]
-select_only(wool)
-bpy.ops.object.convert(target='MESH')
-wool = bpy.context.active_object
-wool.name = "Wool"                       # 轉換後名字會變，順手改回好認的
-print("轉換後羊毛：", tris(wool))
+# 造型腳本可在 metaball 物件上設 o["mesh_name"]（例如小獅的 "Fur"）；沒設就叫 "Wool"（小羊）
+fur_meshes = []
+for o in [o for o in bpy.data.objects if o.type == 'META']:
+    mesh_name = o.get("mesh_name", "Wool")
+    select_only(o)
+    bpy.ops.object.convert(target='MESH')
+    m = bpy.context.active_object
+    m.name = mesh_name                   # 轉換後名字會變，順手改回好認的
+    fur_meshes.append(m)
+    print(f"轉換後 {mesh_name}：", tris(m))
 
 # 2) 減面：Decimate（Collapse）—— 用「目標面數」反推比例，毛變多變少都會落在預算內
+#    目標是所有毛加起來的面數，依各自大小分配
 WOOL_TRI_TARGET = bpy.context.scene.get("wool_tri_target", 3000)   # 造型腳本可自訂（角越大，毛就要越省）
-dec = wool.modifiers.new("Decimate", 'DECIMATE')
-dec.ratio = min(1.0, WOOL_TRI_TARGET / tris(wool))
-print("減面後羊毛：", tris(wool))
-bpy.ops.object.modifier_apply(modifier=dec.name)   # 套用 = 真的改掉網格
-bpy.ops.object.shade_smooth()
+fur_total = sum(tris(m) for m in fur_meshes) or 1
+for m in fur_meshes:
+    select_only(m)
+    dec = m.modifiers.new("Decimate", 'DECIMATE')
+    dec.ratio = min(1.0, WOOL_TRI_TARGET / fur_total)
+    print(f"減面後 {m.name}：", tris(m))
+    bpy.ops.object.modifier_apply(modifier=dec.name)   # 套用 = 真的改掉網格
+    bpy.ops.object.shade_smooth()
 
 # 3) 套用旋轉與縮放（Ctrl+A → Rotation & Scale）：把變換「烘」進網格
 bpy.ops.object.select_all(action='SELECT')
@@ -98,25 +106,35 @@ SLOT = {
     "Clasp": GOLD, "CapeCord": GOLD, "HornBand": GOLD,   # 金扣、飾繩、角環：固定金色
     "Eye": INK, "Nose": INK, "Mouth": INK, "MouthLine": INK, "Hoof": INK,
     "EyeShine": WHITE,
+    # 小獅：主色＝身體的皮；副色＝可愛的肉色；點綴色＝毛（頭頂、兩頰、尾巴毛球）
+    "Body": PRIMARY, "Tail": PRIMARY,
+    "Belly": SECONDARY, "Muzzle": SECONDARY, "Chin": SECONDARY, "Paw": SECONDARY,
+    "Fur": ACCENT,
 }
 
 for o in bpy.data.objects:
     if o.type != 'MESH':
         continue
     base = o.name.split(".")[0]            # "Ear.001" → "Ear"
-    if base not in SLOT:
-        raise ValueError(f"不知道 {o.name} 屬於哪個色槽，請加進 SLOT")
+    # 造型腳本可以直接在物件上寫 o["mask"] = (R, G, B, A)，優先於下面的名稱對照表
+    # （例如小獅的腮紅、肉球是固定粉紅，跟小羊用點綴色的 Cheek 不同）
+    if "mask" in o:
+        slot = tuple(o["mask"])
+    elif base in SLOT:
+        slot = SLOT[base]
+    else:
+        raise ValueError(f"不知道 {o.name} 屬於哪個色槽，請加進 SLOT 或在造型腳本設定 o['mask']")
     mesh = o.data
     if "Mask" in mesh.color_attributes:
         mesh.color_attributes.remove(mesh.color_attributes["Mask"])
     attr = mesh.color_attributes.new("Mask", 'FLOAT_COLOR', 'CORNER')
     for c in attr.data:
-        c.color = SLOT[base]
+        c.color = slot
     # 內襯：造型腳本標了 lining = 1 的面，改用「同一個色槽 × 0.45」。
     # 公式是 R×主色 + G×副色 + B×點綴色，所以通道值給 0.45 就是那個顏色的 45% 亮度＝深色系，
     # 不用新增色槽，換配色時內襯也會自動變成新顏色的深色。
-    if "lining" in mesh.attributes and SLOT[base][3] == 1:
-        dark = tuple(v * 0.45 for v in SLOT[base][:3]) + (1,)
+    if "lining" in mesh.attributes and slot[3] == 1:
+        dark = tuple(v * 0.45 for v in slot[:3]) + (1,)
         lining = mesh.attributes["lining"].data
         for poly in mesh.polygons:
             if lining[poly.index].value:
@@ -129,7 +147,7 @@ bpy.ops.object.select_all(action='DESELECT')
 for o in bpy.data.objects:
     if o.type == 'MESH' and o is not mouth:
         o.select_set(True)
-body = bpy.data.objects["Wool"]
+body = max((o for o in bpy.data.objects if o.type == 'MESH' and o is not mouth), key=tris)   # 以最大的零件為主體
 bpy.context.view_layer.objects.active = body
 bpy.ops.object.join()
 body.name = NAME
