@@ -28,24 +28,14 @@
 - [x] G0 驗收：帶片段開啟顯示 `Fragment OK` 且網址列 `#…` 消失；Unity EditMode 17 項全綠；
       `Assets/Scenes/Main.unity` 已 commit（2026-10-02，組長確認）
 - [ ] G1 核心迴圈（占位美術）：等級/階段/進化規則＋測試、Supabase 讀寫、S0–S6
-- [ ] G2 美術：URP＋toon、3 變體 × 3 網格、動畫、配色遮罩、圖示（先試 AI prompt，見 `docs/ART_PIPELINE.md`）
-  - [x] 小羊幼體造型定稿（Blender 程序化腳本 `art/blender/lamb_baby.py`，2026-10-02）
-  - [x] 收尾腳本 `art/blender/finalize_export.py`：轉網格／減面、頂點色配色遮罩、合併、匯出 FBX（小羊幼體約 6.8k 三角形）
-  - [x] GDD §3.4、§7.2 改為頂點色遮罩；花紋改為「隨成長出現」的花紋遮罩貼圖（2026-10-02）
-  - [x] 小羊成體造型腳本 `art/blender/lamb_adult.py`（脖子、長腿、更蓬的毛、貼在頭側的螺旋捲角；全身約 7.9k 三角形）
-  - [x] 小羊・小領袖造型腳本 `art/blender/lamb_leader.py`（沉著眼神、微笑、淡腮紅、光滑對數螺旋角＋金角環、領袖披風；約 7.9k 三角形）
-  - [x] GDD 改為每種 3 個網格（幼體／成體／小領袖，2026-10-06 決定）
-  - [x] 採用 blendsmith 製作規範（修改版放 `.claude/skills/blendsmith`，GPL-3.0-only）：NPR 卡通＋描邊、每個網格展 UV、
-        腳本＋已驗證 `.blend` 雙交付、Unity／Unreal 匯出；美術設定檔 `art/ART_PROFILE.md`；術語表；CLAUDE.md 改英文正本＋繁中副本（2026-10-12）
-  - [x] 小羊三階段 v001 交付：`art/models/Lamb/`（`.blend`＋Unity FBX＋Unreal FBX），重新開檔驗證各 16 項全 PASS；
-        三角形 6,824／7,936／7,992；Unity／Unreal 實際匯入 NOT RUN
-  - [x] 小獅幼體 v001（`art/blender/lion_baby.py` → `art/models/Lion/`）：頭頂蓬毛＋兩頰軟毛、ω 嘴、肉球；
-        腿的位置與小羊幼體相同（共用四足骨架）；5,856 三角形，驗證 16 項全 PASS（2026-10-12）
-  - [x] 小獅幼體 v002：依組長參考照片調整臉型（大圓耳、鼻樑＋寬鼻、蓬蓬肉墊、淚痕、額頭小斑）、身體斑點（主色 72% 的深色）、
-        腿插進身體＋肩膀／大腿圓肉（修接縫）、Q 版捲尾巴；7,412 三角形，驗證 16 項全 PASS
-  - [x] 小獅幼體 v003：拿掉腮紅；口鼻做成往前凸的立體台＋上窄下寬的鼻樑稜線＋鼻子順著鼻樑下傾；斑點從階段 1 就有（組長選 a）；
-        7,352 三角形，驗證 16 項全 PASS
-  - [ ] 描邊方法與 Unity toon shader（讀 `Mask` 頂點色）；花紋遮罩貼圖（小獅：幼體斑點、成體虎斑）；小獅成體／小領袖
+- [ ] G2 美術：URP＋toon、3 變體 × 3 網格、動畫、配色遮罩、圖示
+  - [x] 美術流程：blendsmith 製作規範（`.claude/skills/blendsmith`）、美術設定檔 `art/ART_PROFILE.md`、
+        造型腳本 → `finalize_export.py` → `verify_blend.py`（細節見 `docs/art-worklog/`）
+  - [x] Lamb：幼體／成體／小領袖（`art/models/Lamb/`）
+  - [ ] Lion：幼體 ✅／成體／小領袖（`art/models/Lion/`）
+  - [ ] Dove：幼體／成體／小領袖
+  - [ ] 共用四足骨架＋動畫（待機、開心、進化、揮手、吃果子）
+  - [ ] Unity toon shader（讀 `Mask`）＋描邊；花紋遮罩貼圖；Unity 實際匯入驗證
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [ ] P1 平台端（於 `kingdom-little-leaders` repo）：migration＋RLS（`service_card_entries` 不含聚會日欄位、
       該班老師唯讀）、家長服事卡頁、鼓勵話語、「去看靈獸」連結（僅兒童班／幼童班）

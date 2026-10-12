@@ -69,6 +69,7 @@ Outputs live in `art/models/<Species>/`: `<Name>_vNNN.blend` (never overwritten)
 
 - **R04:** full recap only at the first production of each new asset or mesh tier; later feedback adjustments are described in a sentence and done.
 - **R07:** English is authoritative for CLAUDE.md, skill documents, templates, this profile and worklogs; Traditional Chinese copies are updated in the same change. Conversation follows the owner's language (Traditional Chinese, Taiwan). Script comments stay Traditional Chinese for learning.
+- **Progress:** `docs/PROGRESS.md` records only major art items — whether each species and stage is done, and pipeline/shader/rig milestones. Per-version art changes go in worklogs only.
 - **Worklogs:** `docs/art-worklog/YYYY-MM-DD_NNN_<topic>.md`, English, committed so every computer and session can read them.
 - **Teaching:** the owner learns step by step; explain new techniques and terms (see the [glossary](../.claude/skills/blendsmith/references/glossary.zh-TW.md)).
 

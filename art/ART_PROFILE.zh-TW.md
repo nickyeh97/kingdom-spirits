@@ -69,6 +69,7 @@ blender -b art/models/Lamb/Lamb_Baby_v001.blend --python-exit-code 1 --python ar
 
 - **R04：**只有每個新資產或新網格階段第一次製作時需要完整複述；之後依回饋調整，用一句話說明後直接做。
 - **R07：**CLAUDE.md、skill 文件、模板、本設定檔與 worklog 以英文為正本；繁體中文副本在同一次修改中一起更新。對話使用組長的語言（台灣繁體中文）。腳本註解維持繁體中文，方便學習。
+- **進度：**`docs/PROGRESS.md` 只記美術大項目——每種動物、每個階段是否完成，以及流程／shader／骨架的里程碑。各版本的美術改動只寫在 worklog。
 - **Worklog：**`docs/art-worklog/YYYY-MM-DD_NNN_<主題>.md`，英文，進版控，讓每台電腦、每個 session 都看得到。
 - **教學：**組長一步一步學習；遇到新技巧與新術語要解釋（見[術語表](../.claude/skills/blendsmith/references/glossary.zh-TW.md)）。
 
