@@ -8,7 +8,8 @@
 #  - 還沒有鬃毛：頭頂一撮蓬毛＋兩頰柔軟的毛（點綴色）
 #  - 主色＝身體的「皮」；副色＝可愛的肉色（口鼻、肚子、腳掌、內耳）
 #  - 腳底有肉球（固定粉紅），揮手打招呼時看得到
-#  - 斑點是階段 2 的花紋（之後用 UV 上的花紋遮罩貼圖做，不在這支腳本）
+#  - v004（組長，2026-10-12）：斑點拿掉，改成自然獅子毛色（跟成體一樣，參考 Meshy Lion Cub）：
+#    背脊較深（shade 漸層）、耳背較深、往下梳的毛流紋理（finalize 烘成花紋遮罩貼圖）
 import bpy, math
 from mathutils import Vector, Quaternion, Euler
 
@@ -18,7 +19,6 @@ FLESH = (1.00, 0.82, 0.74, 1)   # 副色：可愛的肉色
 FUR   = (0.82, 0.48, 0.22, 1)   # 點綴色：頭頂毛、兩頰毛、尾巴毛球
 PINK  = (0.96, 0.60, 0.65, 1)   # 固定色：腮紅、肉球
 ROSE  = (0.42, 0.24, 0.24, 1)   # 固定色：鼻子（參考照片：深色、寬寬的）
-SPOT  = (0.80, 0.55, 0.25, 1)   # 斑點（主色的深色）
 INK   = (0.12, 0.12, 0.18, 1)   # 固定色：眼睛、嘴
 WHITE = (1, 1, 1, 1)
 
@@ -28,8 +28,7 @@ WHITE = (1, 1, 1, 1)
 MASK_PRIMARY   = (1, 0, 0, 1)
 MASK_SECONDARY = (0, 1, 0, 1)
 MASK_PINK = (0.96, 0.60, 0.65, 0)
-# 斑點：主色通道給 0.72 ＝「皮的顏色的 72% 亮度」→ 比皮深一點，換配色時跟著變（跟披風內襯同一招）
-MASK_SPOT = (0.72, 0, 0, 1)
+MASK_EARBACK = (0.6, 0, 0, 1)       # 耳背：主色的 60%（自然毛色的耳背是深色）
 MASK_MARK = (0.30, 0.18, 0.16, 0)   # 固定色：淚痕（眼角往下的深色線）
 MASK_ROSE = (0.42, 0.24, 0.24, 0)
 
@@ -50,6 +49,9 @@ for cu in list(bpy.data.curves):
     bpy.data.curves.remove(cu)
 bpy.context.scene["spirit_name"] = "Lion_Baby"     # 給收尾腳本用的輸出名稱
 bpy.context.scene["wool_tri_target"] = 1400        # 毛（metaball）減到多少面
+bpy.context.scene["preview_palette"] = [SKIN, FLESH, FUR]   # finalize 預覽材質用的配色
+# 毛流紋理：雜訊在上下方向（z）拉長 → 像往下梳的毛（跟成體同一招，幼體小一點所以密一點）
+bpy.context.scene["pattern"] = {"size": 512, "scale": (30.0, 30.0, 7.0), "low": 0.84, "high": 1.0, "detail": 3}
 
 def put(o, name, scale, rot_deg, color, mask=None):
     o.name = name
@@ -95,7 +97,7 @@ for s in (1, -1):
     sphere("EyeShine", (0.12 * s - 0.025, -0.575, 0.775), (0.02, 0.012, 0.02),  (0, 0, 22 * s), WHITE, seg=10, rings=6)
     # （v003 拿掉腮紅：組長要求）
     # 大圓耳：參考照片的幼獅耳朵又大又圓、長在頭頂兩側偏外 → 比 v001 大一圈、往外移
-    sphere("Ear",      (0.225 * s, -0.25, 0.955), (0.11, 0.045, 0.10), (0, 28 * s, -10 * s), SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
+    sphere("Ear",      (0.225 * s, -0.25, 0.955), (0.11, 0.045, 0.10), (0, 28 * s, -10 * s), SKIN, seg=12, rings=6, mask=MASK_EARBACK)
     sphere("EarInner", (0.225 * s, -0.285, 0.95), (0.075, 0.02, 0.065), (0, 28 * s, -10 * s), FLESH, seg=10, rings=6, mask=MASK_SECONDARY)
     # 淚痕：從內眼角往下、沿著鼻樑兩側一路到肉墊上方的深色細線——幼獅臉上最有辨識度的記號
     tear = [Vector((0.088 * s, -0.562, 0.705)), Vector((0.072 * s, -0.592, 0.682)), Vector((0.058 * s, -0.622, 0.668))]
@@ -138,25 +140,6 @@ nose = put(bpy.context.active_object, "Nose", (0.95, 0.7, 1.2), (90, 90, 0), ROS
 nose.rotation_mode = 'QUATERNION'
 nose.rotation_quaternion = Quaternion((1, 0, 0), math.radians(18)) @ Euler([math.radians(a) for a in (90, 90, 0)]).to_quaternion()
 
-# 額頭的小斑紋：照片裡幼獅額頭有一些深色的小點（點綴在毛帽前面）
-# 跟身體的斑點同一招：算出頭表面上的點和法線，讓小圓片貼著皮（v002 初版直接寫座標，結果浮在頭前面）
-def on_ellipsoid(c, h, d, sink=0.99):
-    p = c + Vector((h.x * d.x, h.y * d.y, h.z * d.z)) * sink
-    n = Vector((d.x / h.x, d.y / h.y, d.z / h.z)).normalized()
-    return p, n
-
-def spot(c, h, d, r):
-    p, n = on_ellipsoid(c, h, Vector(d).normalized())
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=4, radius=1, location=p)
-    o = put(bpy.context.active_object, "Spot", (r, r, 0.007), (0, 0, 0), SPOT, mask=MASK_SPOT)
-    o.rotation_mode = 'QUATERNION'
-    o.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(n)   # 圓片的薄邊朝外 → 貼在皮上
-    return o
-
-for d, r in (((0.0, -0.55, 0.83), 0.016), ((-0.13, -0.58, 0.80), 0.013), ((0.13, -0.58, 0.80), 0.013),
-             ((-0.06, -0.66, 0.74), 0.011), ((0.06, -0.66, 0.74), 0.011)):
-    spot(HEAD_C, HEAD_HALF, d, r)
-
 # 嘴：貓科的「ω」形（兩個往下的小彎）。獨立物件、原點在嘴中央 → 吃果子動畫動 Scale Z 就會張嘴
 W, D = 0.042, 0.014
 origin = Vector((0, MZ_FRONT + 0.012, 0.612))
@@ -176,16 +159,12 @@ sphere("Body", BODY_C, BODY_HALF, color=SKIN, seg=20, rings=10)
 # 肚子與胸口：肉色的一塊，從胸口延伸到肚子下面
 sphere("Belly", BODY_C + Vector((0, -0.08, -0.07)), (0.20, 0.27, 0.17), color=FLESH, seg=16, rings=8)
 
-# 身體的斑點：幼獅身上淡淡的斑點（比皮深一點的同色系）。
-# 方法：在身體橢球表面上取點、放一顆壓扁的小圓片，讓它朝向表面的法線方向（第 2 課眼睛貼合臉的原理）。
-# 橢球的法線 = (x/a², y/b², z/c²) 正規化 —— 寫在上面的 on_ellipsoid() 裡
-SPOTS = [  # (方向 x, y, z, 大小) —— 左右錯開、不對稱，看起來比較自然
-    (0.55, -0.20, 0.80, 0.040), (0.75, 0.25, 0.60, 0.034), (0.45, 0.55, 0.70, 0.030), (0.85, -0.15, 0.25, 0.028),
-    (-0.50, -0.05, 0.85, 0.036), (-0.78, 0.35, 0.50, 0.032), (-0.40, 0.62, 0.66, 0.028), (-0.86, -0.25, 0.30, 0.026),
-    (0.10, 0.30, 0.95, 0.030), (-0.15, 0.70, 0.70, 0.026),
-]
-for dx, dy, dz, r in SPOTS:
-    spot(BODY_C, BODY_HALF, (dx, dy, dz), r)
+# 背脊比較深：朝上的點 shade 小一點（finalize 會把色槽通道乘上它，平滑漸變）
+body = bpy.data.objects["Body"]
+shade = body.data.attributes.new("shade", 'FLOAT', 'POINT')
+for v in body.data.vertices:
+    t = max(0.0, min(1.0, (v.normal.z - 0.3) / 0.6))
+    shade.data[v.index].value = 1.0 - 0.15 * t * t * (3 - 2 * t)
 
 # ---------- 腳（位置跟小羊幼體相同）＋ 圓腳掌＋肉球 ----------
 for s in (1, -1):

@@ -593,3 +593,16 @@ Rule IDs (R01–R12) refer to [SKILL.md](../SKILL.md).
 
 **Statistics**
 - What: enable it in the Overlays menu to show vertex, face and triangle counts at the top left; used for budget checks.
+
+**Loft**
+- What: place a cross-section (a ring of points) at intervals along a direction and bridge neighbouring rings with quads to build a tube-like form.
+- Lion Adult v005: a profile table measured from the reference (back height, belly height, half width per slice); each row is one ring, so editing numbers edits the silhouette.
+- Versus metaballs: a loft follows the numbers exactly (no swelling or merging) with tidy faces; metaballs suit lumps that should fuse.
+
+**Procedural noise**
+- What: a formula-generated grey pattern that looks random but is continuous (Noise Texture node). Computed in 3D space, so it never repeats.
+- Lion fur flow: noise stretched vertically (low z density) gives downward streaks like brushed fur; baked onto the UVs as a pattern mask for the engine.
+
+**sRGB and Linear**
+- What: two number encodings of the same colour. Swatches and what we see are sRGB; shading maths uses Linear (amount of light).
+- Why: using sRGB numbers as Linear makes colours look washed out (the first v005 preview did). Convert first.

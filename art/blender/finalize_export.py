@@ -140,6 +140,15 @@ for o in bpy.data.objects:
             if lining[poly.index].value:
                 for li in poly.loop_indices:
                     attr.data[li].color = dark
+    # 深淺漸層：造型腳本在點上寫了 shade（0–1），色槽通道就乘上它（例如獅子背脊比較深）。
+    # 跟內襯同一個原理（通道值 < 1 ＝ 同色系的深色），只是每個點不一樣、會平滑漸變。
+    if "shade" in mesh.attributes and slot[3] == 1:
+        shade = mesh.attributes["shade"].data
+        for poly in mesh.polygons:
+            for li, vi in zip(poly.loop_indices, poly.vertices):
+                c = attr.data[li].color
+                k = shade[vi].value
+                attr.data[li].color = (c[0] * k, c[1] * k, c[2] * k, 1)
 
 # ---------- 2) 合併：除了嘴以外全部合成一個網格 ----------
 # 匯入的現成模型（例如 lion_adult_meshy.py）沒有獨立的嘴：造型腳本設 scene["has_mouth"] = False
@@ -161,7 +170,7 @@ if mouth:
 parts = [o for o in (body, mouth) if o]
 
 # ---------- 3) Blender 裡的預覽材質：用跟 Unity 一樣的公式上色 ----------
-def make_preview_material(primary, secondary, accent, albedo=None):
+def make_preview_material(primary, secondary, accent, texture=None):
     """R01：節點由左到右排列（遮罩 → 拆通道 → 乘上色槽顏色 → 相加 → 選固定色或色槽 → BSDF → 輸出），
     用 Frame 分區、每個節點都有名字，打開 Shader Editor 一看就懂。"""
     m = bpy.data.materials.get("SpiritPreview") or bpy.data.materials.new("SpiritPreview")
@@ -202,26 +211,19 @@ def make_preview_material(primary, secondary, accent, albedo=None):
     mix = node("ShaderNodeMix", "Fixed or palette (alpha)", 160, 60, f_out); mix.data_type = 'RGBA'
     nt.links.new(attr.outputs["Alpha"], mix.inputs["Factor"])
     nt.links.new(attr.outputs["Color"], mix.inputs[6])            # A：固定色
-    nt.links.new(palette, mix.inputs[7])                          # B：色槽混出來的顏色
     bsdf = node("ShaderNodeBsdfPrincipled", "Preview BSDF", 380, 60, f_out)
     bsdf.inputs["Roughness"].default_value = 0.8
-    colour = mix.outputs[2]
-    if albedo:                                   # 有烘焙貼圖：貼圖顏色 × 配色（主色白色 = 貼圖原色）
-        tex = node("ShaderNodeTexImage", "Albedo texture", -680, -260, f_in); tex.image = albedo
-        mul = node("ShaderNodeMix", "Albedo x palette", 160, -160, f_out)
+    if texture:                                  # 貼圖（烘焙的顏色或花紋遮罩）× 色槽顏色；固定色不受影響
+        tex = node("ShaderNodeTexImage", "Texture (albedo or pattern)", -680, -260, f_in); tex.image = texture
+        mul = node("ShaderNodeMix", "Texture x palette", 120, -160, f_pal)
         mul.data_type = 'RGBA'; mul.blend_type = 'MULTIPLY'; mul.inputs["Factor"].default_value = 1
-        nt.links.new(colour, mul.inputs[6]); nt.links.new(tex.outputs["Color"], mul.inputs[7])
-        colour = mul.outputs[2]
-    nt.links.new(colour, bsdf.inputs["Base Color"])
+        nt.links.new(palette, mul.inputs[6]); nt.links.new(tex.outputs["Color"], mul.inputs[7])
+        palette = mul.outputs[2]
+    nt.links.new(palette, mix.inputs[7])                          # B：色槽混出來的顏色
+    nt.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
     out = node("ShaderNodeOutputMaterial", "Output", 680, 60, f_out)
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return m
-
-albedo = bpy.data.images.get(body.get("albedo", ""))
-mat = make_preview_material((1, 1, 1) if albedo else (0.96, 0.93, 0.86), (1.0, 0.95, 0.90), (0.95, 0.55, 0.65), albedo)
-for o in parts:
-    o.data.materials.clear()
-    o.data.materials.append(mat)
 
 # ---------- 4) R03：每個網格都要展 UV（NPR、PBR 都需要；之後的花紋遮罩就畫在這組 UV 上） ----------
 for o in parts:
@@ -232,6 +234,63 @@ for o in parts:
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01)   # 約 66°；島與島之間留間距
     bpy.ops.object.mode_set(mode='OBJECT')
+
+# ---------- 4b) 花紋遮罩：用程序化雜訊「烘」成一張灰階貼圖（例如獅子的毛流紋理） ----------
+# 造型腳本設 scene["pattern"] = {"size": 512, "scale": (x, y, z), "low": 0.8, "high": 1.0}
+#   scale：雜訊在 x、y、z 方向的密度。z 小 → 雜訊沿上下方向拉長 → 看起來像往下梳的毛
+#   low/high：最暗、最亮的倍率（1 = 不變暗）。引擎裡「色槽顏色 × 花紋」，固定色不受影響
+# 3D 雜訊不會重複，不會有「同一塊圖複製貼上」的感覺；貼圖只是把它記錄在 UV 上給引擎用。
+PATTERN = bpy.context.scene.get("pattern")
+if PATTERN:
+    size = int(PATTERN.get("size", 512))
+    img = bpy.data.images.new(f"{NAME}_Pattern", size, size)
+    tmp = bpy.data.materials.new("PatternBake"); tmp.use_nodes = True
+    nt = tmp.node_tree; nt.nodes.clear()
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    mapping = nt.nodes.new("ShaderNodeMapping"); mapping.inputs["Scale"].default_value = tuple(PATTERN["scale"])
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 1.0
+    noise.inputs["Detail"].default_value = float(PATTERN.get("detail", 4))
+    ramp = nt.nodes.new("ShaderNodeMapRange")                 # 雜訊 0.3–0.7 → low–high
+    ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 0.3, 0.7
+    ramp.inputs["To Min"].default_value = float(PATTERN.get("low", 0.8))
+    ramp.inputs["To Max"].default_value = float(PATTERN.get("high", 1.0))
+    emit = nt.nodes.new("ShaderNodeEmission"); out = nt.nodes.new("ShaderNodeOutputMaterial")
+    target = nt.nodes.new("ShaderNodeTexImage"); target.image = img; nt.nodes.active = target
+    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
+    nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
+    nt.links.new(noise.outputs["Fac"], ramp.inputs["Value"])
+    nt.links.new(ramp.outputs["Result"], emit.inputs["Color"])
+    nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+    body.data.materials.clear(); body.data.materials.append(tmp)
+    scene = bpy.context.scene
+    engine = scene.render.engine
+    scene.render.engine = 'CYCLES'; scene.cycles.samples = 1
+    select_only(body)
+    bpy.ops.object.bake(type='EMIT', margin=8)             # 島的邊緣往外多塗 8 像素
+    scene.render.engine = engine
+    tex_dir = os.path.join(OUT_DIR, "textures"); os.makedirs(tex_dir, exist_ok=True)
+    img.filepath_raw = os.path.join(tex_dir, img.name + ".png"); img.file_format = 'PNG'
+    img.save(); img.pack()
+    body["pattern"] = img.name
+    bpy.data.materials.remove(tmp)
+    print("花紋遮罩：", img.filepath_raw)
+
+# ---------- 4c) 預覽材質（用跟 Unity 一樣的公式上色；有貼圖就乘上去） ----------
+texture = bpy.data.images.get(body.get("albedo", "") or body.get("pattern", ""))
+albedo = "albedo" in body
+# 預覽用的配色：造型腳本可設 scene["preview_palette"] = (主色, 副色, 點綴色)；沒設就用小羊的預設
+# （造型腳本寫的是螢幕上看到的 sRGB 顏色；材質節點吃的是 Linear，所以要換算，不然會變得很淡）
+def srgb_to_linear(c):
+    return tuple(v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c)
+pal = [srgb_to_linear(tuple(c)[:3]) for c in bpy.context.scene.get("preview_palette", [])] or \
+      [(0.96, 0.93, 0.86), (1.0, 0.95, 0.90), (0.95, 0.55, 0.65)]
+if albedo:
+    pal[0] = (1, 1, 1)                           # 烘焙的顏色貼圖：主色白色 = 貼圖原色
+mat = make_preview_material(pal[0], pal[1], pal[2], texture)
+for o in parts:
+    o.data.materials.clear()
+    o.data.materials.append(mat)
 
 # ---------- 5) R06：交付時物件都能選取、每個 3D 視窗的 Overlays 與 Extras 都開著 ----------
 for o in bpy.data.objects:

@@ -61,6 +61,10 @@ for o in meshes:
         img = bpy.data.images.get(o["albedo"])
         check(f"{o.name}: albedo texture packed, <= 1024", img is not None and img.packed_file is not None
               and max(img.size) <= 1024, f"{img.name if img else None} {tuple(img.size) if img else ''}")
+    if "pattern" in o:
+        img = bpy.data.images.get(o["pattern"])
+        check(f"{o.name}: pattern mask packed, <= 512", img is not None and img.packed_file is not None
+              and max(img.size) <= 512, f"{img.name if img else None} {tuple(img.size) if img else ''}")
 
 print(f"\nVERIFY {os.path.basename(path)}  Blender {bpy.app.version_string}  built with {bpy.context.scene.get('spirit_built_with')}")
 for name, status, evidence in results:

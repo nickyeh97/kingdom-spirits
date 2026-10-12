@@ -75,3 +75,4 @@ Write the record in English. Discuss it with the user in their preferred languag
 - Status: **confirmed to start** (2026-10-12). Built as Lion_Baby v001.
 - Stage-2 spot pattern texture and adult tabby stripes: later scope (pattern mask on UVs).
 - 2026-10-12 owner decision: body spots stay visible from stage 1 (option a, geometry on the baby mesh). Blush removed in v003.
+- 2026-10-12 owner decision: the baby also uses the natural lion coat (spots removed). Built as Lion_Baby v004; worklog `docs/art-worklog/2026-10-12_011_lion-v005-q-natural-coat.md`.

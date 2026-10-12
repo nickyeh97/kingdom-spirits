@@ -35,18 +35,18 @@ This profile holds project-wide decisions for every 3D model in this repository.
 
 Slot meaning is per species (Lamb: primary wool, secondary face; Lion: primary body skin, secondary flesh tone, accent fur). The finalize script maps common part names to slots, and a shape script can override any part with `o["mask"] = (R, G, B, A)`; use the override whenever a name means something different for the species.
 
-Growth patterns (pattern mask on UVs, from stage 2): Lion — cub spots on the baby mesh; grown meshes use a natural lion coat (lighter muzzle/chin/chest/inner legs, darker spine/ear backs/tail tuft, directional fur strokes, no spots or stripes) taken from the Meshy Lion Cub reference (owner, 2026-10-12; details in `docs/art-worklog/2026-10-12_010_lion-reference-q-style.md`). Lamb — to be decided.
+Growth patterns (pattern mask on UVs, from stage 2): Lion — every mesh uses a natural lion coat (baby spots removed by the owner, 2026-10-12) (lighter muzzle/chin/chest/inner legs, darker spine/ear backs/tail tuft, directional fur strokes, no spots or stripes) taken from the Meshy Lion Cub reference (owner, 2026-10-12; details in `docs/art-worklog/2026-10-12_010_lion-reference-q-style.md`). Lamb — to be decided.
 
 Style stays Q (chibi) for every species. Imported models are references for silhouette and pattern, not delivered style.
 
-Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) : RGB`. FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
+Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) * pattern : RGB`, where `pattern` is the greyscale pattern mask sampled on UV (1 where a mesh has none). A shape script can add a point attribute `shade` (0–1); finalize multiplies the slot channels by it, giving smooth darker zones that follow palette swaps (e.g. a darker spine). FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
 
 ## Pipeline and delivery (R11, R12)
 
 The owner is learning procedural modelling, so **both** the scripts and the verified `.blend` are deliverables.
 
 1. **Shape script** (editable source, commented in Traditional Chinese for learning): `art/blender/<species>_<stage>.py`, e.g. `lamb_baby.py`. It sets `scene["spirit_name"]` and optionally `scene["wool_tri_target"]`.
-2. **Finalize** `art/blender/finalize_export.py`: converts metaballs/curves, decimates wool to the target, applies rotation/scale, removes n-gons, writes `Mask`, joins all but `Mouth`, unwraps UVs on every mesh, builds a readable preview material, enables selection/Extras, exports FBX, saves a versioned `.blend`.
+2. **Finalize** `art/blender/finalize_export.py`: converts metaballs/curves, decimates wool to the target, applies rotation/scale, removes n-gons, writes `Mask` (with `shade`), joins all but `Mouth`, unwraps UVs on every mesh, bakes the pattern mask when `scene["pattern"]` is set (procedural noise → `textures/<Name>_Pattern.png`, packed), builds a readable preview material (`scene["preview_palette"]`, sRGB), enables selection/Extras, exports FBX, saves a versioned `.blend`.
 3. **Verify** `art/blender/verify_blend.py` on the saved file in a fresh Blender process; all checks must PASS.
 
 Command line (from the repository root):
