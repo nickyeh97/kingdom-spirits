@@ -23,3 +23,5 @@ NPR toon + outline; ≤ 8,000 evaluated triangles; `Mask` colour slots as Lion B
 ## Status
 
 Confirmed 2026-10-12 (owner): (1) short young-lion mane, full mane for Leader — yes; (2) forehead "M" tabby mark — yes; (3) S-shaped tail — yes. Built as Lion_Adult v001.
+
+2026-10-12 owner feedback on v001 (faithful summary): back-of-head mane ugly and unrealistic; legs, tail and face odd — use the supplied feline reference images for body shape; tabby M must follow real cats, not an isolated M; back stripes look strange. Owner explicitly deferred originality concerns to a later pass ("make it work first"); only body proportions were taken from the reference — mane shape and colours stay our own. v002 rebuilt accordingly. Shared skeleton: paw landing positions equal Lamb Adult; bone lengths differ (shared hierarchy, rotation-based animation).
