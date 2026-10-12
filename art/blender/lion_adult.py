@@ -1,4 +1,4 @@
-# 小獅（成體，階段 3）完整腳本 —— v005
+# 小獅（成體，階段 3）完整腳本 —— v006
 # 用法：先 File → Save As 另存新檔（例如 Lion_Adult.blend）；Scripting → New → 貼上 → ▶。會清空場景後重建。
 # 之後跑 finalize_export.py 匯出、verify_blend.py 驗證（見 art/ART_PROFILE.zh-TW.md）。
 #
@@ -7,9 +7,11 @@
 #          用「放樣（Loft）」一圈一圈接成身體 → 輪廓的順序跟參考一樣：胸口深、肩膀最高、背平、屁股稍低
 #  - 臉：沿用組長驗收過的小獅幼體的臉（整組放大 1.1 倍），表情語言一致
 #  - 腿：保留 v002/v003 組長說像的腿（貓科前直後 Z），按 Q 版縮短
+# v006（組長回饋）：臉頰毛改成成獅的一圈鬃毛；拿掉脖子那顆（接縫一圈很怪）→ 脖子直接放樣進身體；
+#  淺色的喉嚨、胸口、肚子改成一條連續漸層；胸口、肩膀加寬、腰收細、前腳加粗 → 雄偉有力
 #  - 毛色：自然獅子毛色——背脊較深（shade 漸層）、胸口與肚子較淺（副色）、耳背與尾巴毛球較深，
 #          加上往下梳的毛流紋理（finalize 烘成花紋遮罩貼圖）；沒有斑點、沒有條紋
-import bpy, math
+import bpy, bmesh, math
 from mathutils import Vector, Quaternion, Euler
 
 # ---------- 顏色（只給 Blender 視窗看；匯出後由配色遮罩決定） ----------
@@ -49,7 +51,7 @@ for me in list(bpy.data.meshes):
         bpy.data.meshes.remove(me)
 scene = bpy.context.scene
 scene["spirit_name"] = "Lion_Adult"
-scene["wool_tri_target"] = 900                     # 臉頰軟毛（metaball）減到多少面
+scene["wool_tri_target"] = 1500                    # 鬃毛圈（metaball）減到多少面
 scene["preview_palette"] = [SKIN, FLESH, FUR]      # finalize 預覽材質用的配色
 # 毛流紋理：雜訊在上下方向（z）拉長 → 像往下梳的毛；0.82–1.0 ＝ 最多暗 18%，淡淡的
 scene["pattern"] = {"size": 512, "scale": (26.0, 26.0, 6.0), "low": 0.82, "high": 1.0, "detail": 3}
@@ -107,7 +109,9 @@ def F(x, y, z):
 # ---------- 身體：放樣（Loft） ----------
 # 參考模型（轉正、身高 1.42 m）每隔一段量一次：(前後位置 y, 背的高度, 肚子的高度, 半寬)
 REF_PROFILE = [
-    (-0.62, 1.12, 0.62, 0.20),   # 胸口最前面
+    (-0.72, 1.30, 0.80, 0.17),   # v006：脖子（參考模型胸口往上接到頭的那段）直接放樣進身體 → 沒有一圈接縫
+    (-0.67, 1.24, 0.68, 0.20),
+    (-0.62, 1.16, 0.60, 0.23),   # 胸口最前面
     (-0.575, 1.20, 0.52, 0.26),
     (-0.50, 1.22, 0.47, 0.29),   # 肩膀最高
     (-0.425, 1.20, 0.45, 0.30),
@@ -127,8 +131,16 @@ REF_PROFILE = [
     (0.62, 0.89, 0.70, 0.16),
 ]
 # 換算成 Q 版：前後縮短（腳距要跟共用骨架一樣）、腿變短（整個身體往下）、身體稍微胖一點
+# v006「雄偉有力」：獅子的力量感來自寬厚的胸口和肩膀、收細的腰、結實的臀 → 寬度依前後位置加倍率
+def power_w(y):
+    pts = [(-0.75, 1.10), (-0.30, 1.22), (-0.05, 0.98), (0.15, 0.98), (0.35, 1.10), (0.65, 1.0)]
+    for (y0, f0), (y1, f1) in zip(pts, pts[1:]):
+        if y <= y1:
+            t = max(0.0, (y - y0) / (y1 - y0))
+            return f0 + (f1 - f0) * t
+    return pts[-1][1]
 def to_q(y, top, bot, w):
-    return (0.08 + (y + 0.04) * 0.68, 0.30 + (top - 0.40) * 0.85, 0.30 + (bot - 0.40) * 0.85, w * 0.95)
+    return (0.08 + (y + 0.04) * 0.68, 0.30 + (top - 0.40) * 0.85, 0.30 + (bot - 0.40) * 0.85, w * 0.95 * power_w(y))
 PROFILE = [to_q(*r) for r in REF_PROFILE]
 
 def loft(name, profile, ring_n=28, power=2.6):
@@ -164,6 +176,11 @@ def loft(name, profile, ring_n=28, power=2.6):
             faces.append((b, a, pole) if end == 0 else (a, b, pole))
     me = bpy.data.meshes.new(name)
     me.from_pydata(verts, [], faces)
+    # 統一法線朝外（Ctrl+N）：面的頂點順序決定法線方向，手排的順序可能整個朝內。
+    # 朝內的話，引擎會把它當背面剔除（看不到身體），用法線算的深淺也會上下顛倒（v005 就是這樣）
+    bm = bmesh.new(); bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(me); bm.free()
     me.update()
     o = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(o)
@@ -178,12 +195,17 @@ shade = body.data.attributes.new("shade", 'FLOAT', 'POINT')
 for v in body.data.vertices:
     t = max(0.0, min(1.0, (v.normal.z - 0.3) / 0.6))
     shade.data[v.index].value = 1.0 - 0.15 * t * t * (3 - 2 * t)
-
-# 脖子：把頭和胸口接起來
-sphere("Neck", (0, -0.38, 0.90), (0.21, 0.17, 0.24), color=SKIN, seg=16, rings=8, mask=MASK_PRIMARY)
-# 淺色區：胸口（參考模型胸前有一片蓬蓬的淺色毛）、肚子
-sphere("Chest", (0, -0.31, 0.66), (0.16, 0.07, 0.18), color=FLESH, seg=14, rings=7, mask=MASK_SECONDARY)
-sphere("Belly", (0, 0.06, 0.33), (0.17, 0.30, 0.07), color=FLESH, seg=14, rings=7, mask=MASK_SECONDARY)
+# 淺色的下巴、喉嚨、胸口、肚子：一條連續的漸層（v005 用兩顆橢球，變成「白－橘－白」斷成兩半）
+# light = 0 用原本的色槽、1 = 副色（finalize 會混合）。朝下的面、和胸口前面偏下的面變淺
+light = body.data.attributes.new("light", 'FLOAT', 'POINT')
+def sstep(e0, e1, v):
+    t = max(0.0, min(1.0, (v - e0) / (e1 - e0)))
+    return t * t * (3 - 2 * t)
+for v in body.data.vertices:
+    n, co = v.normal, v.co
+    under = sstep(-0.15, -0.6, n.z)
+    front = sstep(-0.3, -0.75, n.y) * sstep(1.0, 0.8, co.z)
+    light.data[v.index].value = max(under, front)
 
 # ---------- 腿：曲線＋倒角，經過關節點（保留 v002 的腿，按 Q 版縮短） ----------
 def leg(side, ctrl, radii, bevel):
@@ -199,16 +221,17 @@ def leg(side, ctrl, radii, bevel):
 for s in (1, -1):
     # 前腳：肩（藏在胸裡）→ 肘 → 腕 → 腳掌，幾乎直直往下
     leg(s, [(LEG_X, -0.24, 0.55), (LEG_X, -0.24, 0.36), (LEG_X, -0.22, 0.15), (LEG_X, FRONT_Y - 0.02, 0.07)],
-        [1.3, 1.0, 0.82, 0.78], 0.09)
+        [1.45, 1.15, 0.92, 0.86], 0.10)                 # v006：前腳更粗（獅子的前腳最有力）
     # 後腳：髖 → 膝（往前）→ 踝（往後）→ 腳掌：貓科後腳的「Z 字」
     leg(s, [(LEG_X, 0.36, 0.56), (LEG_X, 0.30, 0.38), (LEG_X, 0.44, 0.20), (LEG_X, HIND_Y + 0.02, 0.07)],
-        [1.6, 1.15, 0.85, 0.8], 0.09)
+        [1.7, 1.2, 0.88, 0.84], 0.10)
     # 肩膀、大腿的肌肉：參考模型最明顯的起伏，也把腿頂包住 → 身體和腿沒有縫
-    sphere("Haunch", (LEG_X * 0.95 * s, -0.24, 0.50), (0.12, 0.14, 0.15), color=SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
-    sphere("Haunch", (LEG_X * 0.95 * s, 0.36, 0.52), (0.13, 0.17, 0.17), color=SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
+    # v006：肩膀更大、往外往前頂出（肩胛骨的隆起），大腿更厚 → 看得出肌肉
+    sphere("Haunch", (LEG_X * 1.1 * s, -0.25, 0.53), (0.14, 0.16, 0.19), (0, -10 * s, 0), SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
+    sphere("Haunch", (LEG_X * 1.05 * s, 0.36, 0.53), (0.15, 0.19, 0.19), color=SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
     for y in (FRONT_Y, HIND_Y):
         paw_c = Vector((LEG_X * s, y - 0.03, 0.055))
-        sphere("Paw", paw_c, (0.095, 0.11, 0.06), color=FLESH, seg=12, rings=6, mask=MASK_SECONDARY)
+        sphere("Paw", paw_c, (0.105, 0.12, 0.065), color=FLESH, seg=12, rings=6, mask=MASK_SECONDARY)
         sphere("Pad", paw_c + Vector((0, 0.016, -0.052)), (0.036, 0.032, 0.008), color=PINK, seg=6, rings=3, mask=MASK_PINK)
         for dx in (-0.033, 0.0, 0.033):
             sphere("Pad", paw_c + Vector((dx, -0.055 + abs(dx) * 0.4, -0.047)), (0.015, 0.015, 0.008),
@@ -251,29 +274,33 @@ for i in range(13):
     radii.append(1.0 - 0.35 * abs(u))
 curve("Mouth", pts, radii, 0.0065 * S, INK).location = F(0, MZ_FRONT + 0.012, 0.612)
 
-# ---------- 兩頰往外蓬的軟毛（metaball，跟身體同色）：參考模型的臉頰毛往兩側、往後翹 ----------
-mb = bpy.data.metaballs.new("CheekCloud")
-mb.resolution, mb.render_resolution, mb.threshold = 0.022, 0.018, 0.6
-cheek = bpy.data.objects.new("CheekCloud", mb)
-cheek["mesh_name"] = "Cheek"
-cheek["mask"] = MASK_PRIMARY
-bpy.context.scene.collection.objects.link(cheek)
-cheek.color = SKIN
+# ---------- v006 鬃毛圈：成獅那一圈毛茸茸的毛，框住整張臉（metaball，點綴色＝較深的毛） ----------
+# 只在臉的周圍一圈，不包後腦和後頸（v001 包住後腦，組長說很醜）。
+# 圈放在耳朵根部後面一點：從正面看，耳朵從鬃毛圈上冒出來。
+# 毛球間距 ÷ 半徑 ≈ 1.7：比羊毛的 2.4 密 → 毛球融成一圈、但邊緣還是一團一團的蓬鬆感。
+mb = bpy.data.metaballs.new("ManeCloud")
+mb.resolution, mb.render_resolution, mb.threshold = 0.024, 0.02, 0.6
+mane = bpy.data.objects.new("ManeCloud", mb)
+mane["mesh_name"] = "Mane"
+mane["mask"] = (0, 0, 1, 1)
+bpy.context.scene.collection.objects.link(mane)
+mane.color = FUR
 K = 0.574
 def ball(co, r):
     e = mb.elements.new(type='BALL')
     e.co, e.radius, e.stiffness = co, r / K, 2.0
-# 參考模型的臉頰毛：從頭的下緣往後、往外翹出去的一撮。
-# 一串越來越小、間距比半徑小的 metaball 會融成一根「往外尖」的錐形 → 看起來像翹起來的毛，不是一顆顆的球。
-# （試過：幼體那圈花邊在成體側面像一串珠子；三顆大球從正面看像兩顆腫包）
-for s_ in (1, -1):
-    for co, r in (((0.22, -0.06, -0.15), 0.07), ((0.27, 0.0, -0.18), 0.055),
-                  ((0.31, 0.05, -0.21), 0.042), ((0.34, 0.09, -0.24), 0.03)):
-        ball(HEAD_C + Vector((co[0] * s_, co[1], co[2])), r)
+MANE_Y = HEAD_C.y + 0.10                           # 圈的位置：頭中心往後 10 公分
+for row, (grow, r0, dy) in enumerate(((1.0, 0.085, 0.0), (1.13, 0.068, 0.07))):   # 內圈大毛球、外圈往後一點的小毛球
+    rx, rz = 0.33 * grow, 0.31 * grow
+    n = round(2 * math.pi * (rx + rz) / 2 / (r0 * 1.7))
+    for k in range(n):
+        a = 2 * math.pi * (k + 0.5 * row) / n       # 外圈錯開半格 → 毛球交錯
+        r = r0 * (1.0 if k % 2 == 0 else 0.85)      # 大小交錯 → 不會像一圈整齊的珠子
+        ball(Vector((rx * math.sin(a), MANE_Y + dy, HEAD_C.z + rz * math.cos(a))), r)
 
 for screen in bpy.data.screens:
     for area in screen.areas:
         if area.type == 'VIEW_3D':
             area.spaces.active.shading.type = 'SOLID'
             area.spaces.active.shading.color_type = 'OBJECT'
-print("小獅成體 v005 完成")
+print("小獅成體 v006 完成")

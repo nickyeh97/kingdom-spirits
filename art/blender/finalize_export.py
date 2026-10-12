@@ -140,6 +140,14 @@ for o in bpy.data.objects:
             if lining[poly.index].value:
                 for li in poly.loop_indices:
                     attr.data[li].color = dark
+    # 淺色漸層：造型腳本在點上寫了 light（0–1），往副色混過去（例如獅子的喉嚨、胸口、肚子）
+    if "light" in mesh.attributes and slot[3] == 1:
+        light = mesh.attributes["light"].data
+        for poly in mesh.polygons:
+            for li, vi in zip(poly.loop_indices, poly.vertices):
+                c = attr.data[li].color
+                k = light[vi].value
+                attr.data[li].color = (c[0] * (1 - k), c[1] * (1 - k) + k, c[2] * (1 - k), 1)
     # 深淺漸層：造型腳本在點上寫了 shade（0–1），色槽通道就乘上它（例如獅子背脊比較深）。
     # 跟內襯同一個原理（通道值 < 1 ＝ 同色系的深色），只是每個點不一樣、會平滑漸變。
     if "shade" in mesh.attributes and slot[3] == 1:

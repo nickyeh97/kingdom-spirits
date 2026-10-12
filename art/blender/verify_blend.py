@@ -40,6 +40,30 @@ for o in meshes:
         inside = all(-1e-4 <= c.x <= 1 + 1e-4 and -1e-4 <= c.y <= 1 + 1e-4 for c in coords)
         check(f"{o.name}: UV map unwrapped (R03)", finite and spread > 0.05 and inside,
               f"'{uv.name}', {len(coords)} loops, inside 0-1: {inside}")
+    # 法線朝外：每個獨立零件（連在一起的一團面）算「有號體積」，朝內的零件體積是負的。
+    # 朝內的零件在引擎裡會被背面剔除（整塊消失），v005 的身體就是這樣，這項檢查之前沒抓到。
+    import bmesh
+    bm = bmesh.new(); bm.from_mesh(me)
+    bm.verts.ensure_lookup_table()
+    parent = list(range(len(bm.verts)))
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]; i = parent[i]
+        return i
+    for e in bm.edges:
+        a_, b_ = find(e.verts[0].index), find(e.verts[1].index)
+        if a_ != b_: parent[a_] = b_
+    vol = {}
+    for f in bm.calc_loop_triangles():
+        v0, v1, v2 = (l.vert.co for l in f)
+        r = find(f[0].vert.index)
+        vol[r] = vol.get(r, 0.0) + v0.dot(v1.cross(v2)) / 6
+    # 只算「封閉」的零件（每條邊剛好接兩個面）；開口的小片（例如曲線的封口）體積沒有意義
+    open_parts = {find(e.verts[0].index) for e in bm.edges if len(e.link_faces) != 2}
+    vol = {r: v for r, v in vol.items() if r not in open_parts}
+    inside_out = sum(1 for v in vol.values() if v < -1e-7)
+    bm.free()
+    check(f"{o.name}: normals face outward (no inside-out parts)", inside_out == 0, f"{inside_out} of {len(vol)} closed parts inside out")
     check(f"{o.name}: colour mask attribute", "Mask" in me.color_attributes, ", ".join(a.name for a in me.color_attributes))
     sx, sy, sz = o.scale
     check(f"{o.name}: scale applied", abs(sx - 1) < 1e-4 and abs(sy - 1) < 1e-4 and abs(sz - 1) < 1e-4, f"scale {tuple(round(v, 4) for v in o.scale)}")

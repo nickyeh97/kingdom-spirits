@@ -39,7 +39,7 @@ Growth patterns (pattern mask on UVs, from stage 2): Lion — every mesh uses a 
 
 Style stays Q (chibi) for every species. Imported models are references for silhouette and pattern, not delivered style.
 
-Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) * pattern : RGB`, where `pattern` is the greyscale pattern mask sampled on UV (1 where a mesh has none). A shape script can add a point attribute `shade` (0–1); finalize multiplies the slot channels by it, giving smooth darker zones that follow palette swaps (e.g. a darker spine). FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
+Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) * pattern : RGB`, where `pattern` is the greyscale pattern mask sampled on UV (1 where a mesh has none). A shape script can add point attributes `shade` (0–1; slot channels multiplied, e.g. a darker spine) and `light` (0–1; blend toward the secondary slot, e.g. a pale throat and belly); both give smooth zones that follow palette swaps. FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
 
 ## Pipeline and delivery (R11, R12)
 
