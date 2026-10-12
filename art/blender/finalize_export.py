@@ -1,7 +1,17 @@
-# 靈獸收尾腳本：metaball 轉網格、減面、套用變換、配色遮罩、合併、預覽材質、匯出 FBX
-# 用法：先跑 lamb_baby.py（或其他靈獸造型腳本），存檔後在同一場景執行本檔。
+# 靈獸收尾腳本：metaball 轉網格、減面、套用變換、去除 n-gon、配色遮罩、合併、展 UV、
+#               預覽材質、匯出 FBX、存版本化 .blend
+# 用法（Blender 介面）：先跑造型腳本（例如 lamb_baby.py），存檔後在同一場景執行本檔；
+#                      FBX 與 .blend 會輸出到 .blend 所在資料夾。
+# 用法（命令列）：blender -b --python lamb_baby.py --python finalize_export.py -- <輸出資料夾> [--unreal]
+# 之後用 verify_blend.py 重新開檔驗證（blendsmith R11）。
 # 第 5 課
-import bpy
+import bpy, os, sys
+
+ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+UNREAL = "--unreal" in ARGS
+OUT_DIR = next((a for a in ARGS if not a.startswith("--")), None) or \
+          (bpy.path.abspath("//") if bpy.data.filepath else os.path.expanduser("~"))
+os.makedirs(OUT_DIR, exist_ok=True)
 
 def tris(o):
     """數一個物件「實際顯示」的三角形數（含 modifier 的效果）。"""
@@ -46,12 +56,25 @@ bpy.ops.object.shade_smooth()
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-# 4) 預算檢查
+# 4) R03：不能有 n-gon（5 邊以上的面）。圓柱、圓錐的蓋子和曲線的封口都是 n-gon。
+#    用 Poke 在每個 n-gon 中心加一個點、拉成一圈小三角形（從中心放射，不是從邊上某一點拉長扇形）。
+import bmesh
+for o in bpy.data.objects:
+    if o.type != 'MESH':
+        continue
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    ngons = [f for f in bm.faces if len(f.verts) > 4]
+    if ngons:
+        bmesh.ops.poke(bm, faces=ngons)
+        bm.to_mesh(o.data)
+    bm.free()
+
+# 5) 預算檢查
 total = sum(tris(o) for o in bpy.data.objects if o.type == 'MESH')
 print(f"全身三角形：{total}（成體預算 8000）")
 
 # 第 6 課
-import bpy, os
 
 # ---------- 1) 每個零件屬於哪個「色槽」 ----------
 # 色槽（可換色）：A = 1，RGB 用「哪個通道亮」表示是哪一槽
@@ -117,33 +140,51 @@ mouth.matrix_parent_inverse = body.matrix_world.inverted()
 
 # ---------- 3) Blender 裡的預覽材質：用跟 Unity 一樣的公式上色 ----------
 def make_preview_material(primary, secondary, accent):
+    """R01：節點由左到右排列（遮罩 → 拆通道 → 乘上色槽顏色 → 相加 → 選固定色或色槽 → BSDF → 輸出），
+    用 Frame 分區、每個節點都有名字，打開 Shader Editor 一看就懂。"""
     m = bpy.data.materials.get("SpiritPreview") or bpy.data.materials.new("SpiritPreview")
     m.use_nodes = True
     nt = m.node_tree
     nt.nodes.clear()
-    attr = nt.nodes.new("ShaderNodeVertexColor"); attr.layer_name = "Mask"
-    sep = nt.nodes.new("ShaderNodeSeparateColor")
+
+    def node(kind, label, x, y, frame=None):
+        n = nt.nodes.new(kind)
+        n.label = n.name = label
+        n.location = (x, y)
+        if frame:
+            n.parent = frame
+        return n
+
+    f_in = node("NodeFrame", "1 Colour mask (vertex colour)", 0, 0)
+    f_pal = node("NodeFrame", "2 Palette slots: R=primary G=secondary B=accent", 0, 0)
+    f_out = node("NodeFrame", "3 Fixed colour vs palette, shading", 0, 0)
+
+    attr = node("ShaderNodeVertexColor", "Mask", -900, 0, f_in); attr.layer_name = "Mask"
+    sep = node("ShaderNodeSeparateColor", "Split RGB", -680, 120, f_in)
     nt.links.new(attr.outputs["Color"], sep.inputs["Color"])
 
-    def scaled(color, channel):                 # 通道值 × 該槽顏色
-        n = nt.nodes.new("ShaderNodeVectorMath"); n.operation = 'SCALE'
+    def scaled(color, channel, label, y):        # 通道值 × 該槽顏色
+        n = node("ShaderNodeVectorMath", label, -440, y, f_pal); n.operation = 'SCALE'
         n.inputs[0].default_value = color[:3]
         nt.links.new(sep.outputs[channel], n.inputs["Scale"])
         return n.outputs[0]
-    def add(a, b):
-        n = nt.nodes.new("ShaderNodeVectorMath"); n.operation = 'ADD'
+    def add(a, b, label, x, y):
+        n = node("ShaderNodeVectorMath", label, x, y, f_pal); n.operation = 'ADD'
         nt.links.new(a, n.inputs[0]); nt.links.new(b, n.inputs[1])
         return n.outputs[0]
-    palette = add(add(scaled(primary, "Red"), scaled(secondary, "Green")), scaled(accent, "Blue"))
+    p = scaled(primary, "Red", "Primary colour", 260)
+    s_ = scaled(secondary, "Green", "Secondary colour", 80)
+    a = scaled(accent, "Blue", "Accent colour", -100)
+    palette = add(add(p, s_, "Primary + Secondary", -220, 180), a, "+ Accent", -40, 80)
 
-    mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = 'RGBA'   # A=0 用固定色、A=1 用色槽
+    mix = node("ShaderNodeMix", "Fixed or palette (alpha)", 160, 60, f_out); mix.data_type = 'RGBA'
     nt.links.new(attr.outputs["Alpha"], mix.inputs["Factor"])
     nt.links.new(attr.outputs["Color"], mix.inputs[6])            # A：固定色
     nt.links.new(palette, mix.inputs[7])                          # B：色槽混出來的顏色
-    bsdf = nt.nodes.new("ShaderNodeBsdfPrincipled")
+    bsdf = node("ShaderNodeBsdfPrincipled", "Preview BSDF", 380, 60, f_out)
     bsdf.inputs["Roughness"].default_value = 0.8
     nt.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
-    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    out = node("ShaderNodeOutputMaterial", "Output", 680, 60, f_out)
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return m
 
@@ -152,19 +193,55 @@ for o in (body, mouth):
     o.data.materials.clear()
     o.data.materials.append(mat)
 
-# ---------- 4) 匯出 FBX 給 Unity ----------
-path = bpy.path.abspath(f"//{NAME}.fbx") if bpy.data.filepath else os.path.join(os.path.expanduser("~"), f"{NAME}.fbx")
-bpy.ops.object.select_all(action='DESELECT')
-body.select_set(True); mouth.select_set(True)
-bpy.ops.export_scene.fbx(
-    filepath=path,
-    use_selection=True,
-    object_types={'MESH'},
-    apply_scale_options='FBX_SCALE_ALL',   # 1 Blender 公尺 = 1 Unity 單位
-    axis_forward='-Z', axis_up='Y',        # 換成 Unity 的座標軸
-    bake_space_transform=True,             # 進 Unity 後不會多出 -90° 的 X 旋轉
-    colors_type='LINEAR',                  # 遮罩數值原封不動（不做 sRGB 轉換）
-    mesh_smooth_type='FACE',
-    add_leaf_bones=False,
-)
-print("已匯出：", path)
+# ---------- 4) R03：每個網格都要展 UV（NPR、PBR 都需要；之後的花紋遮罩就畫在這組 UV 上） ----------
+for o in (body, mouth):
+    select_only(o)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(angle_limit=1.15, island_margin=0.01)   # 約 66°；島與島之間留間距
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+# ---------- 5) R06：交付時物件都能選取、每個 3D 視窗的 Overlays 與 Extras 都開著 ----------
+for o in bpy.data.objects:
+    o.hide_select = False
+for c in bpy.data.collections:
+    c.hide_select = False
+for screen in bpy.data.screens:
+    for area in screen.areas:
+        if area.type == 'VIEW_3D':
+            sp = area.spaces.active
+            sp.overlay.show_overlays = True
+            sp.overlay.show_extras = True
+
+# ---------- 6) R12：匯出 FBX 給遊戲引擎 ----------
+def export_fbx(path, preset):
+    bpy.ops.object.select_all(action='DESELECT')
+    body.select_set(True); mouth.select_set(True)
+    common = dict(filepath=path, use_selection=True, object_types={'MESH'},
+                  colors_type='LINEAR',            # 遮罩數值原封不動（不做 sRGB 轉換）
+                  mesh_smooth_type='FACE',         # 寫入平滑群組，引擎不會警告
+                  add_leaf_bones=False)
+    if preset == "unity":
+        bpy.ops.export_scene.fbx(**common,
+            apply_scale_options='FBX_SCALE_ALL',   # 1 Blender 公尺 = 1 Unity 單位
+            axis_forward='-Z', axis_up='Y',        # 換成 Unity 的座標軸
+            bake_space_transform=True)             # 進 Unity 後不會多出 -90° 的 X 旋轉
+    else:
+        # Unreal：保留 Blender 預設軸向，由 Unreal 匯入器換算；FBX 內記錄公尺，Unreal 會換成公分。
+        # 尚未在 Unreal 實際匯入驗證（R12：NOT RUN），第一次使用時要檢查朝向與比例。
+        bpy.ops.export_scene.fbx(**common, apply_scale_options='FBX_SCALE_NONE',
+                                 axis_forward='-Z', axis_up='Y')
+    print("已匯出：", path)
+
+export_fbx(os.path.join(OUT_DIR, f"{NAME}.fbx"), "unity")
+if UNREAL:
+    export_fbx(os.path.join(OUT_DIR, f"{NAME}_UE.fbx"), "unreal")
+
+# ---------- 7) R11：存成版本化的 .blend（不覆蓋舊版） ----------
+v = 1
+while os.path.exists(os.path.join(OUT_DIR, f"{NAME}_v{v:03d}.blend")):
+    v += 1
+blend_path = os.path.join(OUT_DIR, f"{NAME}_v{v:03d}.blend")
+bpy.context.scene["spirit_built_with"] = bpy.app.version_string
+bpy.ops.wm.save_as_mainfile(filepath=blend_path, copy=True)   # copy=True：目前開著的檔案不會被換掉
+print("已存檔：", blend_path)

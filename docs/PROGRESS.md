@@ -35,7 +35,11 @@
   - [x] 小羊成體造型腳本 `art/blender/lamb_adult.py`（脖子、長腿、更蓬的毛、貼在頭側的螺旋捲角；全身約 7.9k 三角形）
   - [x] 小羊・小領袖造型腳本 `art/blender/lamb_leader.py`（沉著眼神、微笑、淡腮紅、光滑對數螺旋角＋金角環、領袖披風；約 7.9k 三角形）
   - [x] GDD 改為每種 3 個網格（幼體／成體／小領袖，2026-10-06 決定）
-  - [ ] 花紋貼圖（展 UV）；小獅幼體／成體；Unity 端讀頂點色的 toon 著色器
+  - [x] 採用 blendsmith 製作規範（修改版放 `.claude/skills/blendsmith`，GPL-3.0-only）：NPR 卡通＋描邊、每個網格展 UV、
+        腳本＋已驗證 `.blend` 雙交付、Unity／Unreal 匯出；美術設定檔 `art/ART_PROFILE.md`；術語表；CLAUDE.md 改英文正本＋繁中副本（2026-10-12）
+  - [x] 小羊三階段 v001 交付：`art/models/Lamb/`（`.blend`＋Unity FBX＋Unreal FBX），重新開檔驗證各 16 項全 PASS；
+        三角形 6,824／7,936／7,992；Unity／Unreal 實際匯入 NOT RUN
+  - [ ] 描邊方法與 Unity toon shader（讀 `Mask` 頂點色）；花紋遮罩貼圖；小獅幼體／成體／小領袖
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [ ] P1 平台端（於 `kingdom-little-leaders` repo）：migration＋RLS（`service_card_entries` 不含聚會日欄位、
       該班老師唯讀）、家長服事卡頁、鼓勵話語、「去看靈獸」連結（僅兒童班／幼童班）
