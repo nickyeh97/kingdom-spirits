@@ -35,3 +35,5 @@ Confirmed 2026-10-12 (owner): (1) short young-lion mane, full mane for Leader �
 2026-10-12 v005 built: Q style, loft body from the measured reference profile, Lion Baby face × 1.1, v002 legs, natural coat (shade + secondary light zones + fur-flow pattern mask). Worklog 011.
 
 2026-10-12 v006 (owner feedback on v005): adult mane ring framing the face; neck sphere removed (neck lofted into the body); continuous light underside; broader chest/shoulders, tucked waist, thicker forelegs. v005 body found inside out (fixed; verify now checks). Worklog 012.
+
+2026-10-12 owner on v006: "很棒，味道出來了" (accepted direction). v007 fixes buried paw pads and the tail-root gap (worklog 012).

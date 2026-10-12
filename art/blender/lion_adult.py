@@ -1,4 +1,4 @@
-# 小獅（成體，階段 3）完整腳本 —— v006
+# 小獅（成體，階段 3）完整腳本 —— v007（v006 + 肉球露出來、尾巴接縫）
 # 用法：先 File → Save As 另存新檔（例如 Lion_Adult.blend）；Scripting → New → 貼上 → ▶。會清空場景後重建。
 # 之後跑 finalize_export.py 匯出、verify_blend.py 驗證（見 art/ART_PROFILE.zh-TW.md）。
 #
@@ -230,15 +230,21 @@ for s in (1, -1):
     sphere("Haunch", (LEG_X * 1.1 * s, -0.25, 0.53), (0.14, 0.16, 0.19), (0, -10 * s, 0), SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
     sphere("Haunch", (LEG_X * 1.05 * s, 0.36, 0.53), (0.15, 0.19, 0.19), color=SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
     for y in (FRONT_Y, HIND_Y):
-        paw_c = Vector((LEG_X * s, y - 0.03, 0.055))
-        sphere("Paw", paw_c, (0.105, 0.12, 0.065), color=FLESH, seg=12, rings=6, mask=MASK_SECONDARY)
-        sphere("Pad", paw_c + Vector((0, 0.016, -0.052)), (0.036, 0.032, 0.008), color=PINK, seg=6, rings=3, mask=MASK_PINK)
+        # v007：v006 把腳掌放大，但肉球還用舊的高度 → 整顆埋進腳掌裡看不到。
+        # 肉球的高度改成「跟著腳掌的大小算」：放在橢球腳底的表面上（橢球公式算出該前後位置的底部高度）
+        PAW = Vector((0.105, 0.12, 0.065))
+        paw_c = Vector((LEG_X * s, y - 0.03, PAW.z))           # 腳底剛好貼地（Z = 0）
+        def sole(dx, dy):
+            return paw_c + Vector((dx, dy, -PAW.z * math.sqrt(max(0.0, 1 - (dx / PAW.x) ** 2 - (dy / PAW.y) ** 2)) + 0.002))
+        sphere("Paw", paw_c, PAW, color=FLESH, seg=12, rings=6, mask=MASK_SECONDARY)
+        sphere("Pad", sole(0, 0.018), (0.04, 0.036, 0.009), color=PINK, seg=6, rings=3, mask=MASK_PINK)
         for dx in (-0.033, 0.0, 0.033):
-            sphere("Pad", paw_c + Vector((dx, -0.055 + abs(dx) * 0.4, -0.047)), (0.015, 0.015, 0.008),
+            sphere("Pad", sole(dx, -0.055 + abs(dx) * 0.4), (0.017, 0.017, 0.009),
                    color=PINK, seg=6, rings=3, mask=MASK_PINK)
 
 # ---------- 尾巴：細長往下垂、末端深色毛球（參考模型） ----------
-tail = smooth_path([Vector((0, 0.50, 0.78)), Vector((0, 0.62, 0.62)), Vector((0, 0.68, 0.42)), Vector((0, 0.74, 0.30))], n_per=4)
+# v007：尾巴根部往身體裡多插一截（v006 的起點剛好在屁股表面外面，看得到縫）
+tail = smooth_path([Vector((0, 0.44, 0.70)), Vector((0, 0.52, 0.74)), Vector((0, 0.62, 0.62)), Vector((0, 0.68, 0.42)), Vector((0, 0.74, 0.30))], n_per=4)
 curve("Tail", tail, [1.0 - 0.4 * i / (len(tail) - 1) for i in range(len(tail))], 0.034, SKIN, round_steps=2, mask=MASK_PRIMARY)
 sphere("TailTuft", tail[-1] + Vector((0, 0.015, -0.015)), (0.05, 0.065, 0.06), (20, 0, 0), FUR, seg=10, rings=6, mask=MASK_TUFT)
 
