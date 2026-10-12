@@ -35,7 +35,9 @@ This profile holds project-wide decisions for every 3D model in this repository.
 
 Slot meaning is per species (Lamb: primary wool, secondary face; Lion: primary body skin, secondary flesh tone, accent fur). The finalize script maps common part names to slots, and a shape script can override any part with `o["mask"] = (R, G, B, A)`; use the override whenever a name means something different for the species.
 
-Growth patterns (pattern mask on UVs, from stage 2): Lion — cub spots on the baby mesh, tabby-cat stripes on grown meshes. Lamb — to be decided.
+Growth patterns (pattern mask on UVs, from stage 2): Lion — cub spots on the baby mesh; grown meshes use a natural lion coat (lighter muzzle/chin/chest/inner legs, darker spine/ear backs/tail tuft, directional fur strokes, no spots or stripes) taken from the Meshy Lion Cub reference (owner, 2026-10-12; details in `docs/art-worklog/2026-10-12_010_lion-reference-q-style.md`). Lamb — to be decided.
+
+Style stays Q (chibi) for every species. Imported models are references for silhouette and pattern, not delivered style.
 
 Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) : RGB`. FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
 

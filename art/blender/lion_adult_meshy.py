@@ -1,4 +1,4 @@
-# 小獅（成體，階段 3）—— v004：改用 CC0 的 Meshy「Lion Cub」模型，處理成遊戲規格
+# 小獅參考模型處理：CC0 的 Meshy「Lion Cub」→ 減面＋烘焙（v004 用過；組長決定風格改回 Q 版，此模型改當輪廓與毛色參考）
 # 來源：art/source/Meshy_AI_Lion_Cub_1012072324_texture.blend（授權見 art/source/LICENSE.md）
 # 用法（命令列，在 repo 根目錄）：
 #   blender -b --python art/blender/lion_adult_meshy.py --python art/blender/finalize_export.py -- art/models/Lion --unreal
@@ -36,21 +36,31 @@ high = dst.objects[0]
 bpy.context.scene.collection.objects.link(high)
 high.name = "High"
 
-# 方向：來源檔的頭已經朝 −Y（= Unity 正前方），只要調大小、把腳底放到 Z=0、置中
+# 方向：來源檔的頭大致朝 −Y，但整隻在水平面上斜了約 29°（v004 沒發現，FBX 是歪的）。
+# 做法：找「胸口」和「屁股」兩團點的中心，連成脊椎線，繞 Z 轉到跟 Y 軸平行；再調大小、腳底放到 Z=0、置中。
 bpy.context.view_layer.update()
 high.select_set(True)
 bpy.context.view_layer.objects.active = high
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-# 17 萬個點用 Python 一個一個算太慢，用 numpy 一次讀進陣列（foreach_get）
+# 17 萬個點用 Python 一個一個算太慢，用 numpy 一次讀進陣列（foreach_get），算完再一次寫回（foreach_set）
 co = np.empty(len(high.data.vertices) * 3, dtype=np.float32)
 high.data.vertices.foreach_get("co", co)
-co = co.reshape(-1, 3)
-(xmin, ymin, zmin), (xmax, ymax, zmax) = co.min(0), co.max(0)
-xmid, ymid = (xmin + xmax) / 2, (ymin + ymax) / 2
-s = TARGET_HEIGHT / (zmax - zmin)
-high.location = (-xmid * s, -ymid * s, -zmin * s)
-high.scale = (s, s, s)
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+co = co.reshape(-1, 3).astype(np.float64)
+mn, mx = co.min(0), co.max(0)
+co = (co - [(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, mn[2]]) * (TARGET_HEIGHT / (mx[2] - mn[2]))   # 腳底 Z=0、調身高
+z, y = co[:, 2], co[:, 1]
+chest = co[(z > 0.42 * TARGET_HEIGHT) & (z < 0.70 * TARGET_HEIGHT) & (y < -0.07 * TARGET_HEIGHT) & (y > -0.35 * TARGET_HEIGHT)].mean(0)
+rump = co[(z > 0.42 * TARGET_HEIGHT) & (z < 0.70 * TARGET_HEIGHT) & (y > 0.21 * TARGET_HEIGHT)].mean(0)
+a = math.atan2(rump[0] - chest[0], rump[1] - chest[1])   # 脊椎偏離 +Y 的角度
+print(f"脊椎偏轉 {math.degrees(a):.1f}°，轉正")
+c, s_ = math.cos(a), math.sin(a)
+x, y = co[:, 0].copy(), co[:, 1].copy()
+co[:, 0], co[:, 1] = c * x - s_ * y, s_ * x + c * y      # 繞 Z 轉（2D 旋轉公式）
+mid = (chest + rump) / 2
+co[:, 0] -= c * mid[0] - s_ * mid[1]                     # 用脊椎線置中（腳的姿勢不對稱，外框中心會偏）
+co[:, 1] -= (co[:, 1].min() + co[:, 1].max()) / 2
+high.data.vertices.foreach_set("co", co.astype(np.float32).ravel())
+high.data.update()
 
 # 烘焙只要「原本的顏色」：把來源材質改成「貼圖 → 自發光」，不受光線、金屬度影響
 src_mat = high.data.materials[0]

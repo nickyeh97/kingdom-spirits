@@ -32,7 +32,7 @@
   - [x] 美術流程：blendsmith 製作規範（`.claude/skills/blendsmith`）、美術設定檔 `art/ART_PROFILE.md`、
         造型腳本 → `finalize_export.py` → `verify_blend.py`（細節見 `docs/art-worklog/`）
   - [x] Lamb：幼體／成體／小領袖（`art/models/Lamb/`）
-  - [ ] Lion：幼體 ✅／成體 ⏳（v004 改用 CC0 Meshy 模型，待驗收）／小領袖（`art/models/Lion/`）
+  - [ ] Lion：幼體 ✅／成體（改回 Q 版重做；Meshy 模型作為輪廓與毛色參考）／小領袖（`art/models/Lion/`）
   - [ ] Dove：幼體／成體／小領袖
   - [ ] 共用四足骨架＋動畫（待機、開心、進化、揮手、吃果子）
   - [ ] Unity toon shader（讀 `Mask`）＋描邊；花紋遮罩貼圖；Unity 實際匯入驗證
