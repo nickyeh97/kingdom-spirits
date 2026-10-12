@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    純 C# 核心（Assets/Core）的測試，不需要 Unity 授權即可在本機與 CI 執行。
+    編譯的是與 Unity 相同的原始檔與測試檔；Unity 端由 Test Framework 跑同一批 EditMode 測試。
+    LangVersion 對齊 Unity 6 的 C# 9，避免寫出 Unity 編不過的語法。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Core/**/*.cs" />
+    <Compile Include="../../Assets/Tests/EditMode/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+</Project>

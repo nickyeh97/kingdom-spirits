@@ -1,0 +1,6 @@
+{
+    "name": "SpiritBeast.Core",
+    "rootNamespace": "SpiritBeast.Core",
+    "references": [],
+    "noEngineReferences": true
+}

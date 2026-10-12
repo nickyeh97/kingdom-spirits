@@ -48,11 +48,11 @@
 
 | 層 | 選型 |
 | --- | --- |
-| 引擎 | Unity 6（6000.x 最新 LTS），建置目標 **Web**，URP ＋ 簡易 toon 著色器 |
+| 引擎 | **Unity 6000.3.25f1（Unity 6.3 LTS）**，建置目標 **Web**；URP ＋ 簡易 toon 著色器於 G2 導入。不用 Beta 版（CI 無映像） |
 | UI | UGUI ＋ TextMeshPro（靜態字型圖集，Noto Sans TC 子集） |
 | 資料 | UnityWebRequest → Supabase REST；JSON 用 Newtonsoft |
-| 測試 | Unity Test Framework，EditMode 為主；核心邏輯放在無 UnityEngine 依賴的 `SpiritBeast.Core` |
-| 命令列 | Unity Hub CLI 裝編輯器；Editor `-batchmode` 建置與測試（指令見 `docs/GDD.md` §8.5） |
+| 測試 | 核心邏輯放在無 UnityEngine 依賴的 `SpiritBeast.Core`；同一批 NUnit 測試由 `dotnet test Tools/CoreTests`（免授權）與 Unity Test Framework（EditMode）各跑一次 |
+| 命令列 | Unity CLI（`unity install …`）裝編輯器；Editor `-batchmode` 建置與測試（指令見 `docs/DEVELOPMENT.md`） |
 | 託管 / CI | Vercel 或 Cloudflare Pages 靜態站；GitHub Actions（game-ci） |
 
 ### 硬性約束（手機 Web）
@@ -63,7 +63,7 @@
 
 ### 美術界線
 
-參考《幻獸帕魯》的**風格語彙**（圓潤低多邊形、大頭身比、cel-shading、可愛表情），**不得複製任何帕魯角色的造型、名稱、配色或標誌特徵**。靈獸為原創，以聖經動物為原型（小羊、鴿子、小獅；擴充：小鹿、雛鷹、小魚）。所有資產須原創或授權合規。
+參考《幻獸帕魯》的**風格語彙**（圓潤低多邊形、大頭身比、cel-shading、可愛表情），**不得複製任何帕魯角色的造型、名稱、配色或標誌特徵**。靈獸為原創，以聖經動物為原型，**名稱一律以英文顯示**（Lamb、Dove、Lion；擴充：Deer、Eagle、Fish）。所有資產須原創或授權合規；產製流程見 `docs/ART_PIPELINE.md`（先試 AI prompt＋Blender，不佳再買素材）。
 
 ## Repo 結構
 
@@ -73,20 +73,25 @@ CLAUDE.md                              # 本文件
 .claude/skills/karpathy-guidelines/    # 程式撰寫行為守則 skill（先想再寫、簡單優先、外科手術式修改、目標驅動）
 docs/DESIGN_PRINCIPLES.md              # 最高守則（與平台共用，必讀）
 docs/GDD.md                            # 遊戲設計開發規格書（需求基準）
-docs/DEVELOPMENT.md                    # 開發指南（G0 建立：Unity 版本、命令列、CI、部署）
+docs/ART_PIPELINE.md                   # 美術產製流程（AI prompt → Blender；不佳改買素材）
+docs/DEVELOPMENT.md                    # 開發指南：Unity 版本、命令列測試/建置、CI Secrets、Vercel 部署
 docs/PROGRESS.md                       # 進度總覽（單一事實來源；每個 Sprint 結束必更新）
 Assets/Config                          # 階段門檻、配色、經文池（資料，不寫死在程式）
 Assets/Core                            # 純 C# 核心邏輯（可測）
 Assets/Runtime                         # MonoBehaviour：畫面、動畫、Supabase 客戶端
-Assets/Tests/EditMode                  # 核心邏輯單元測試
-Assets/WebGLTemplates                  # 自訂 index.html（讀授權片段）
+Assets/Editor                          # 命令列建置腳本（SpiritBeast.Editor.Build.Web）
+Assets/Plugins/WebGL                   # jslib：從網頁取走授權片段
+Assets/Tests/EditMode                  # 核心邏輯單元測試（只用 NUnit）
+Assets/WebGLTemplates                  # 自訂 index.html（讀授權片段、清網址列、載入畫面）
+Tools/CoreTests                        # dotnet 測試專案：編譯 Assets/Core＋Assets/Tests，免 Unity 授權
+.github/workflows/ci.yml               # core-tests／unity（需授權）／deploy（main → Vercel）
 ```
 
 ## 工作流程慣例
 
 - **先想再寫**：寫/改程式一律套用 `.claude/skills/karpathy-guidelines`——說明假設、簡單優先、只動該動的、先定可驗證的成功準則再動手。
 - **進度文件（必遵守）**：`docs/PROGRESS.md` 是跨 session 的進度單一事實來源；每個 Sprint 結案、需求異動、外部設定完成時必更新；新 session 開工前先讀它。
-- **測試**：核心規則（等級、階段、進化判定、片段解析、鼓勵語挑選）**必須**有 EditMode 測試，含邊際案例；送 PR 前跑測試與 Web 建置確認全綠；CI 於 push/PR 自動執行。
+- **測試**：核心規則（等級、階段、進化判定、片段解析、鼓勵語挑選）**必須**有 EditMode 測試，含邊際案例；送 PR 前至少跑 `dotnet test Tools/CoreTests`；能開 Unity 時再跑 EditMode 測試與 Web 建置；CI 於 push/PR 自動執行。
 - **設定值不寫死**：階段門檻、配色、經文池放 `Assets/Config` 的 ScriptableObject。
 - **收尾檢查（每次需求實作完畢後必跑）**：
   1. 守則檢查清單（`docs/DESIGN_PRINCIPLES.md` §4）七項重過一次。

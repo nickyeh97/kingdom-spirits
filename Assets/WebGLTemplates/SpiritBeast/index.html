@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #fdf6e3; }
+    #unity-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+               justify-content: center; font: 16px/1.5 system-ui, sans-serif; color: #5b4a2e; }
+    #bar { width: 60%; height: 8px; margin-top: 12px; overflow: hidden; border-radius: 4px; background: #eadfc8; }
+    #fill { width: 0; height: 100%; background: #e0a84a; }
+    #load-time { position: fixed; right: 8px; bottom: 8px; font: 12px system-ui, sans-serif; color: #8a7a5c; }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+  <div id="loading"><div id="msg">靈獸準備中…</div><div id="bar"><div id="fill"></div></div></div>
+  <script>
+    // 平台以 #at=<access_token>&child=<child_id> 開啟遊戲（GDD §6.2）：
+    // 先暫存給 C# 取走，並立刻清掉網址列，避免 token 留在瀏覽紀錄或被複製分享
+    window.__sbAuthFragment = location.hash.slice(1);
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    var loadStart = performance.now();
+  </script>
+  <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+  <script>
+    createUnityInstance(document.querySelector('#unity-canvas'), {
+      dataUrl: 'Build/{{{ DATA_FILENAME }}}',
+      frameworkUrl: 'Build/{{{ FRAMEWORK_FILENAME }}}',
+      codeUrl: 'Build/{{{ CODE_FILENAME }}}',
+      streamingAssetsUrl: 'StreamingAssets',
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+    }, function (progress) {
+      document.querySelector('#fill').style.width = (100 * progress) + '%';
+    }).then(function () {
+      document.querySelector('#loading').remove();
+      // G0 驗收用：顯示首次載入秒數（目標 4G ≤ 10 秒）
+      var el = document.createElement('div');
+      el.id = 'load-time';
+      el.textContent = ((performance.now() - loadStart) / 1000).toFixed(1) + ' s';
+      document.body.appendChild(el);
+    }).catch(function (err) {
+      document.querySelector('#msg').textContent = '載入失敗，請從平台重新開啟';
+      console.error(err);
+    });
+  </script>
+</body>
+</html>

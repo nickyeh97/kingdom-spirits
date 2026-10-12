@@ -1,0 +1,16 @@
+{
+  "headers": [
+    {
+      "source": "/Build/(.*)\\.unityweb",
+      "headers": [{ "key": "Content-Encoding", "value": "br" }]
+    },
+    {
+      "source": "/Build/(.*)\\.wasm\\.unityweb",
+      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
+    },
+    {
+      "source": "/Build/(.*)\\.js\\.unityweb",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+    }
+  ]
+}
