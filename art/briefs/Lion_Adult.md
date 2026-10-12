@@ -22,4 +22,4 @@ NPR toon + outline; ≤ 8,000 evaluated triangles; `Mask` colour slots as Lion B
 
 ## Status
 
-Awaiting R04 confirmation. No model generated.
+Confirmed 2026-10-12 (owner): (1) short young-lion mane, full mane for Leader — yes; (2) forehead "M" tabby mark — yes; (3) S-shaped tail — yes. Built as Lion_Adult v001.
