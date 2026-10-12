@@ -109,7 +109,7 @@ SLOT = {
     # 小獅：主色＝身體的皮；副色＝可愛的肉色；點綴色＝毛（頭頂、兩頰、尾巴毛球）
     "Body": PRIMARY, "Tail": PRIMARY,
     "Belly": SECONDARY, "Muzzle": SECONDARY, "Chin": SECONDARY, "Paw": SECONDARY,
-    "Fur": ACCENT,
+    "Fur": ACCENT, "Chest": SECONDARY, "EyeRim": SECONDARY, "TailTuft": ACCENT,
 }
 
 for o in bpy.data.objects:
