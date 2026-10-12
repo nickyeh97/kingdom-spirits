@@ -54,7 +54,9 @@ blender -b --python art/blender/lamb_baby.py --python art/blender/finalize_expor
 blender -b art/models/Lamb/Lamb_Baby_v001.blend --python-exit-code 1 --python art/blender/verify_blend.py
 ```
 
-Outputs live in `art/models/<Species>/`: `<Name>_vNNN.blend` (never overwritten), `<Name>.fbx` (Unity preset), `<Name>_UE.fbx` (Unreal preset). Do not put `.blend` files inside Unity `Assets/`.
+Outputs live in `art/models/<Species>/`**Imported licensed models** (e.g. Lion Adult v004): a processing script (`art/blender/lion_adult_meshy.py`) replaces the shape script — decimate, new UVs, bake a ≤ 1024² albedo to `art/models/<Species>/textures/` (also packed in the `.blend`), and set `o["keep_uv"]`, `o["albedo"]`, and `scene["has_mouth"] = False` when there is no separate mouth. Record the source and licence in `art/source/LICENSE.md` and every profile deviation in the worklog.
+
+: `<Name>_vNNN.blend` (never overwritten), `<Name>.fbx` (Unity preset), `<Name>_UE.fbx` (Unreal preset). Do not put `.blend` files inside Unity `Assets/`.
 
 | Preset | Axes | Scale | Other |
 | --- | --- | --- | --- |

@@ -51,13 +51,22 @@ views = [a.spaces.active for s in bpy.data.screens for a in s.areas if a.type ==
 check("Overlays and Extras on in every 3D View (R06)",
       bool(views) and all(v.overlay.show_overlays and v.overlay.show_extras for v in views), f"{len(views)} 3D Views")
 mouth = bpy.data.objects.get("Mouth")
-check("Mouth is a separate child object", mouth is not None and mouth.parent is not None,
-      f"parent={mouth.parent.name if mouth and mouth.parent else None}")
+if bpy.context.scene.get("has_mouth", True):
+    check("Mouth is a separate child object", mouth is not None and mouth.parent is not None,
+          f"parent={mouth.parent.name if mouth and mouth.parent else None}")
+else:
+    results.append(("Mouth is a separate child object", "SKIP", "scene has_mouth = False (recorded deviation)"))
+for o in meshes:
+    if "albedo" in o:
+        img = bpy.data.images.get(o["albedo"])
+        check(f"{o.name}: albedo texture packed, <= 1024", img is not None and img.packed_file is not None
+              and max(img.size) <= 1024, f"{img.name if img else None} {tuple(img.size) if img else ''}")
 
 print(f"\nVERIFY {os.path.basename(path)}  Blender {bpy.app.version_string}  built with {bpy.context.scene.get('spirit_built_with')}")
 for name, status, evidence in results:
     print(f"{status:5s} | {name} | {evidence}")
 failed = [r for r in results if r[1] == "FAIL"]
-print(f"SUMMARY: {len(results) - len(failed)} PASS, {len(failed)} FAIL")
+skipped = [r for r in results if r[1] == "SKIP"]
+print(f"SUMMARY: {len(results) - len(failed) - len(skipped)} PASS, {len(skipped)} SKIP, {len(failed)} FAIL")
 if failed:
     raise SystemExit(1)

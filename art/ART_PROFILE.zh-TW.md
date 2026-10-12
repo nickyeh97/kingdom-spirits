@@ -54,7 +54,9 @@ blender -b --python art/blender/lamb_baby.py --python art/blender/finalize_expor
 blender -b art/models/Lamb/Lamb_Baby_v001.blend --python-exit-code 1 --python art/blender/verify_blend.py
 ```
 
-成品放在 `art/models/<物種>/`：`<名稱>_vNNN.blend`（永不覆蓋）、`<名稱>.fbx`（Unity 設定）、`<名稱>_UE.fbx`（Unreal 設定）。不要把 `.blend` 放進 Unity 的 `Assets/`。
+成品放在 `art/models/<物種>/`**匯入有授權的現成模型**（例如小獅成體 v004）：用處理腳本（`art/blender/lion_adult_meshy.py`）取代造型腳本——減面、重展 UV、烘焙 ≤ 1024² 的顏色貼圖到 `art/models/<物種>/textures/`（也包進 `.blend`），並設定 `o["keep_uv"]`、`o["albedo"]`；沒有獨立的嘴時設 `scene["has_mouth"] = False`。來源與授權記在 `art/source/LICENSE.md`，所有違反設定檔的偏差寫進 worklog。
+
+：`<名稱>_vNNN.blend`（永不覆蓋）、`<名稱>.fbx`（Unity 設定）、`<名稱>_UE.fbx`（Unreal 設定）。不要把 `.blend` 放進 Unity 的 `Assets/`。
 
 | 設定 | 座標軸 | 比例 | 其他 |
 | --- | --- | --- | --- |

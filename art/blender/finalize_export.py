@@ -142,7 +142,9 @@ for o in bpy.data.objects:
                     attr.data[li].color = dark
 
 # ---------- 2) 合併：除了嘴以外全部合成一個網格 ----------
-mouth = bpy.data.objects["Mouth"]
+# 匯入的現成模型（例如 lion_adult_meshy.py）沒有獨立的嘴：造型腳本設 scene["has_mouth"] = False
+HAS_MOUTH = bpy.context.scene.get("has_mouth", True)
+mouth = bpy.data.objects["Mouth"] if HAS_MOUTH else None
 bpy.ops.object.select_all(action='DESELECT')
 for o in bpy.data.objects:
     if o.type == 'MESH' and o is not mouth:
@@ -153,11 +155,13 @@ bpy.ops.object.join()
 body.name = NAME
 
 # 嘴保持獨立（要做張嘴動畫），設成身體的子物件，一起移動
-mouth.parent = body
-mouth.matrix_parent_inverse = body.matrix_world.inverted()
+if mouth:
+    mouth.parent = body
+    mouth.matrix_parent_inverse = body.matrix_world.inverted()
+parts = [o for o in (body, mouth) if o]
 
 # ---------- 3) Blender 裡的預覽材質：用跟 Unity 一樣的公式上色 ----------
-def make_preview_material(primary, secondary, accent):
+def make_preview_material(primary, secondary, accent, albedo=None):
     """R01：節點由左到右排列（遮罩 → 拆通道 → 乘上色槽顏色 → 相加 → 選固定色或色槽 → BSDF → 輸出），
     用 Frame 分區、每個節點都有名字，打開 Shader Editor 一看就懂。"""
     m = bpy.data.materials.get("SpiritPreview") or bpy.data.materials.new("SpiritPreview")
@@ -201,18 +205,28 @@ def make_preview_material(primary, secondary, accent):
     nt.links.new(palette, mix.inputs[7])                          # B：色槽混出來的顏色
     bsdf = node("ShaderNodeBsdfPrincipled", "Preview BSDF", 380, 60, f_out)
     bsdf.inputs["Roughness"].default_value = 0.8
-    nt.links.new(mix.outputs[2], bsdf.inputs["Base Color"])
+    colour = mix.outputs[2]
+    if albedo:                                   # 有烘焙貼圖：貼圖顏色 × 配色（主色白色 = 貼圖原色）
+        tex = node("ShaderNodeTexImage", "Albedo texture", -680, -260, f_in); tex.image = albedo
+        mul = node("ShaderNodeMix", "Albedo x palette", 160, -160, f_out)
+        mul.data_type = 'RGBA'; mul.blend_type = 'MULTIPLY'; mul.inputs["Factor"].default_value = 1
+        nt.links.new(colour, mul.inputs[6]); nt.links.new(tex.outputs["Color"], mul.inputs[7])
+        colour = mul.outputs[2]
+    nt.links.new(colour, bsdf.inputs["Base Color"])
     out = node("ShaderNodeOutputMaterial", "Output", 680, 60, f_out)
     nt.links.new(bsdf.outputs["BSDF"], out.inputs["Surface"])
     return m
 
-mat = make_preview_material((0.96, 0.93, 0.86), (1.0, 0.95, 0.90), (0.95, 0.55, 0.65))
-for o in (body, mouth):
+albedo = bpy.data.images.get(body.get("albedo", ""))
+mat = make_preview_material((1, 1, 1) if albedo else (0.96, 0.93, 0.86), (1.0, 0.95, 0.90), (0.95, 0.55, 0.65), albedo)
+for o in parts:
     o.data.materials.clear()
     o.data.materials.append(mat)
 
 # ---------- 4) R03：每個網格都要展 UV（NPR、PBR 都需要；之後的花紋遮罩就畫在這組 UV 上） ----------
-for o in (body, mouth):
+for o in parts:
+    if o.get("keep_uv"):                         # 已烘焙貼圖的 UV 不能重展，不然貼圖會對不上
+        continue
     select_only(o)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
@@ -234,7 +248,8 @@ for screen in bpy.data.screens:
 # ---------- 6) R12：匯出 FBX 給遊戲引擎 ----------
 def export_fbx(path, preset):
     bpy.ops.object.select_all(action='DESELECT')
-    body.select_set(True); mouth.select_set(True)
+    for o in parts:
+        o.select_set(True)
     common = dict(filepath=path, use_selection=True, object_types={'MESH'},
                   colors_type='LINEAR',            # 遮罩數值原封不動（不做 sRGB 轉換）
                   mesh_smooth_type='FACE',         # 寫入平滑群組，引擎不會警告

@@ -224,6 +224,14 @@ Rule IDs (R01–R12) refer to [SKILL.md](../SKILL.md).
 
 **High poly / low poly**
 - What: many faces with detail, used for baking; few faces, used in the game.
+- Lion Adult v004: the Meshy high poly has 340k triangles; a copy decimated to 7,600 is the low poly, and the high poly's colour is baked onto the low poly's texture.
+
+**Bake**
+- What: write computed data (colour, lighting, normals) into an image. Rays leave the low-poly surface, hit the high poly, and store what they hit in the low poly's UV pixels.
+- Selected to Active: the selected object (high) is the source; the active object (low) receives.
+- Cage extrusion: rays start slightly outside the low surface so they reach high-poly detail that sticks out. Too small misses, too large hits other parts.
+- Margin: extend each UV island's colour outward by a few pixels so seams do not show black when the texture is scaled or mipmapped.
+- Tip: for colour only, rewire the source material to texture → Emission and bake EMIT; lighting and metallic then have no effect.
 
 **LOD (level of detail)**
 - What: several versions of a model at decreasing triangle counts for increasing distance.
