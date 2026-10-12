@@ -10,7 +10,7 @@
 #  - 腳底有肉球（固定粉紅），揮手打招呼時看得到
 #  - 斑點是階段 2 的花紋（之後用 UV 上的花紋遮罩貼圖做，不在這支腳本）
 import bpy, math
-from mathutils import Vector
+from mathutils import Vector, Quaternion, Euler
 
 # ---------- 顏色（只給 Blender 視窗看；匯出後由配色遮罩決定） ----------
 SKIN  = (0.96, 0.70, 0.32, 1)   # 主色：身體的皮（金黃）
@@ -69,12 +69,12 @@ def cylinder(name, loc, radius, depth, color):
     bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=radius, depth=depth, location=loc)
     return put(bpy.context.active_object, name, (1, 1, 1), (0, 0, 0), color)
 
-def curve(name, pts, radii, bevel, color):
+def curve(name, pts, radii, bevel, color, round_steps=1):
     """曲線＋倒角（跟小羊的角同一招）：pts 是路徑，radii 是每一點的粗細倍率。"""
     cu = bpy.data.curves.new(name, 'CURVE')
     cu.dimensions = '3D'
     cu.bevel_depth = bevel
-    cu.bevel_resolution = 1
+    cu.bevel_resolution = round_steps        # 截面的圓滑度（1 = 六角形，3 = 接近圓）
     cu.use_fill_caps = True
     sp = cu.splines.new('POLY')
     sp.points.add(len(pts) - 1)
@@ -93,29 +93,50 @@ for s in (1, -1):
     # 眼睛：跟小羊幼體一模一樣（三隻並排時是同一個世界的夥伴）
     sphere("Eye",      (0.12 * s,         -0.545, 0.74),  (0.055, 0.03, 0.075), (0, 0, 22 * s), INK)
     sphere("EyeShine", (0.12 * s - 0.025, -0.575, 0.775), (0.02, 0.012, 0.02),  (0, 0, 22 * s), WHITE, seg=10, rings=6)
-    # 腮紅：固定粉紅（不跟著配色換）
-    sphere("Blush",    (0.20 * s, -0.50, 0.64), (0.05, 0.015, 0.035), (0, 0, 42 * s), PINK, seg=10, rings=6, mask=MASK_PINK)
+    # （v003 拿掉腮紅：組長要求）
     # 大圓耳：參考照片的幼獅耳朵又大又圓、長在頭頂兩側偏外 → 比 v001 大一圈、往外移
     sphere("Ear",      (0.225 * s, -0.25, 0.955), (0.11, 0.045, 0.10), (0, 28 * s, -10 * s), SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
     sphere("EarInner", (0.225 * s, -0.285, 0.95), (0.075, 0.02, 0.065), (0, 28 * s, -10 * s), FLESH, seg=10, rings=6, mask=MASK_SECONDARY)
-    # 鬍鬚肉墊：兩顆蓬蓬的圓墊（參考照片的口鼻兩側），稍微往下、往外，讓臉變成上寬下窄的「心形」
-    sphere("Muzzle",   (0.05 * s, -0.56, 0.645), (0.06, 0.04, 0.048), (0, 0, 15 * s), FLESH, seg=12, rings=6)
-    # 淚痕：從內眼角往下、沿著鼻樑兩側的深色細線——幼獅臉上最有辨識度的記號
-    tear = [Vector((0.085 * s, -0.565, 0.70)), Vector((0.07 * s, -0.578, 0.675)), Vector((0.06 * s, -0.585, 0.66))]
+    # 淚痕：從內眼角往下、沿著鼻樑兩側一路到肉墊上方的深色細線——幼獅臉上最有辨識度的記號
+    tear = [Vector((0.088 * s, -0.562, 0.705)), Vector((0.072 * s, -0.592, 0.682)), Vector((0.058 * s, -0.622, 0.668))]
     curve("TearMark", tear, [1.0, 0.8, 0.5], 0.0055, ROSE)["mask"] = MASK_MARK
 
-# 口鼻：在兩顆肉墊後面加一塊微微隆起的「口鼻底座」，讓臉的下半部往前一點（照片的口鼻比較長）
-sphere("Snout", (0, -0.535, 0.665), (0.085, 0.05, 0.07), color=FLESH, seg=12, rings=6, mask=MASK_SECONDARY)
-# 鼻樑：從兩眼之間往下到鼻子的一條稍微隆起的皮（主色）
-sphere("Bridge", (0, -0.56, 0.715), (0.03, 0.03, 0.05), color=SKIN, seg=10, rings=6, mask=MASK_PRIMARY)
-sphere("Chin", (0, -0.548, 0.598), (0.038, 0.03, 0.028), color=FLESH, seg=10, rings=6)
+# ---------- 口鼻的立體感（v003，參考照片的側面體積） ----------
+# 照片裡的口鼻是一整塊往前凸的「台」：
+#   鼻樑從兩眼之間開始，越往下越寬，一路接到鼻頭；鼻頭在台的最前端；
+#   鼻子下面才分成左右兩顆肉墊，再往下是小下巴。
+# 用三層來堆：①口鼻台（主體）②鼻樑（上面的稜線）③肉墊＋下巴（下面的兩顆圓）
+MZ_FRONT = -0.635                     # 口鼻最前面的位置（臉的表面約在 −0.55，往前凸約 8.5 公分）
 
-# 鼻子：寬寬的倒三角形（參考照片的鼻子又寬又深）。圓錐給 3 個頂點就是三角形。
-# 旋轉：先繞 X 轉 90° 讓圓錐的軸朝前（−Y），這時三角形有一個角朝 +X（側邊）；
-#       再繞 Y 轉 90°，把那個角轉到正下方 → 倒三角。X 方向拉寬一點
-bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.042, radius2=0.016, depth=0.024,
-                                location=(0, -0.598, 0.69))
-nose = put(bpy.context.active_object, "Nose", (0.95, 0.7, 1.15), (90, 90, 0), ROSE, mask=MASK_ROSE)
+# ① 口鼻台：一顆前後拉長的橢球，從臉裡面長出來（主色＝皮，跟照片一樣是毛的顏色）
+sphere("Snout", (0, -0.565, 0.668), (0.095, 0.07, 0.072), color=SKIN, seg=16, rings=8, mask=MASK_PRIMARY)
+
+# ② 鼻樑：一條從兩眼之間往下、往前的稜線。用曲線＋倒角（跟羊角、尾巴同一招），
+#    每一點的粗細從上往下變寬 → 上窄下寬，像照片裡的鼻樑接到寬寬的鼻頭
+bridge = []
+for i in range(7):
+    t = i / 6
+    bridge.append(Vector((0, -0.548 - 0.068 * t ** 1.3, 0.800 - 0.115 * t)))
+# 粗細：上端細、往下變寬，最後一點收小 → 末端圓圓地收進鼻子後面，不會露出平平的切口
+radii = [0.45, 0.6, 0.72, 0.84, 0.95, 1.0, 0.55]
+curve("Bridge", bridge, radii, 0.040, SKIN, round_steps=3)["mask"] = MASK_PRIMARY
+
+# ③ 鬍鬚肉墊：在鼻頭下方、口鼻台的前下側，左右兩顆蓬蓬的圓（副色＝肉色）
+for s in (1, -1):
+    sphere("Muzzle", (0.046 * s, MZ_FRONT + 0.022, 0.640), (0.055, 0.042, 0.044), (0, 0, 18 * s), FLESH, seg=12, rings=6)
+sphere("Chin", (0, MZ_FRONT + 0.035, 0.592), (0.04, 0.032, 0.03), color=FLESH, seg=10, rings=6)
+
+# 鼻子：寬寬的倒三角形，蓋在鼻樑最下端、口鼻台的最前面。
+# 圓錐給 3 個頂點就是三角形。旋轉：先繞 X 轉 90° 讓圓錐的軸朝前（−Y），這時三角形有一個角朝 +X（側邊）；
+# 再繞 Y 轉 90°，把那個角轉到正下方 → 倒三角。
+bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.052, radius2=0.022, depth=0.03,
+                                location=(0, MZ_FRONT - 0.004, 0.684))
+nose = put(bpy.context.active_object, "Nose", (0.95, 0.7, 1.2), (90, 90, 0), ROSE, mask=MASK_ROSE)
+# 再整個繞世界 X 軸往下傾 18°，順著鼻樑的斜度。
+# 注意不能直接把 90 改成 72：歐拉角是「依序」旋轉，先轉的會影響後轉的軸，結果鼻子會歪到側邊；
+# 用四元數「在現有旋轉外面再乘一個旋轉」才是繞世界軸。
+nose.rotation_mode = 'QUATERNION'
+nose.rotation_quaternion = Quaternion((1, 0, 0), math.radians(18)) @ Euler([math.radians(a) for a in (90, 90, 0)]).to_quaternion()
 
 # 額頭的小斑紋：照片裡幼獅額頭有一些深色的小點（點綴在毛帽前面）
 # 跟身體的斑點同一招：算出頭表面上的點和法線，讓小圓片貼著皮（v002 初版直接寫座標，結果浮在頭前面）
@@ -138,7 +159,7 @@ for d, r in (((0.0, -0.55, 0.83), 0.016), ((-0.13, -0.58, 0.80), 0.013), ((0.13,
 
 # 嘴：貓科的「ω」形（兩個往下的小彎）。獨立物件、原點在嘴中央 → 吃果子動畫動 Scale Z 就會張嘴
 W, D = 0.042, 0.014
-origin = Vector((0, -0.592, 0.618))
+origin = Vector((0, MZ_FRONT + 0.012, 0.612))
 pts, radii = [], []
 for i in range(13):
     u = -1 + 2 * i / 12                     # -1 … 1
