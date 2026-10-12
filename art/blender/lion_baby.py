@@ -17,7 +17,8 @@ SKIN  = (0.96, 0.70, 0.32, 1)   # 主色：身體的皮（金黃）
 FLESH = (1.00, 0.82, 0.74, 1)   # 副色：可愛的肉色
 FUR   = (0.82, 0.48, 0.22, 1)   # 點綴色：頭頂毛、兩頰毛、尾巴毛球
 PINK  = (0.96, 0.60, 0.65, 1)   # 固定色：腮紅、肉球
-ROSE  = (0.55, 0.30, 0.32, 1)   # 固定色：鼻子
+ROSE  = (0.42, 0.24, 0.24, 1)   # 固定色：鼻子（參考照片：深色、寬寬的）
+SPOT  = (0.80, 0.55, 0.25, 1)   # 斑點（主色的深色）
 INK   = (0.12, 0.12, 0.18, 1)   # 固定色：眼睛、嘴
 WHITE = (1, 1, 1, 1)
 
@@ -27,7 +28,10 @@ WHITE = (1, 1, 1, 1)
 MASK_PRIMARY   = (1, 0, 0, 1)
 MASK_SECONDARY = (0, 1, 0, 1)
 MASK_PINK = (0.96, 0.60, 0.65, 0)
-MASK_ROSE = (0.55, 0.30, 0.32, 0)
+# 斑點：主色通道給 0.72 ＝「皮的顏色的 72% 亮度」→ 比皮深一點，換配色時跟著變（跟披風內襯同一招）
+MASK_SPOT = (0.72, 0, 0, 1)
+MASK_MARK = (0.30, 0.18, 0.16, 0)   # 固定色：淚痕（眼角往下的深色線）
+MASK_ROSE = (0.42, 0.24, 0.24, 0)
 
 # ---------- 比例：跟小羊幼體一樣（並排、共用骨架） ----------
 HEAD_C = Vector((0, -0.30, 0.72))
@@ -91,22 +95,50 @@ for s in (1, -1):
     sphere("EyeShine", (0.12 * s - 0.025, -0.575, 0.775), (0.02, 0.012, 0.02),  (0, 0, 22 * s), WHITE, seg=10, rings=6)
     # 腮紅：固定粉紅（不跟著配色換）
     sphere("Blush",    (0.20 * s, -0.50, 0.64), (0.05, 0.015, 0.035), (0, 0, 42 * s), PINK, seg=10, rings=6, mask=MASK_PINK)
-    # 圓耳朵：真實幼獅的耳朵小而圓；長在頭頂兩側，稍微往外傾
-    sphere("Ear",      (0.20 * s, -0.24, 0.96), (0.085, 0.04, 0.08), (0, 22 * s, -12 * s), SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
-    sphere("EarInner", (0.20 * s, -0.27, 0.955), (0.055, 0.02, 0.05), (0, 22 * s, -12 * s), FLESH, seg=10, rings=6, mask=MASK_SECONDARY)
-    # 鬍鬚肉墊：兩顆小圓墊（貓科的口鼻），不是往前凸出的豬鼻子
-    sphere("Muzzle",   (0.045 * s, -0.565, 0.655), (0.055, 0.035, 0.045), (0, 0, 15 * s), FLESH, seg=12, rings=6)
+    # 大圓耳：參考照片的幼獅耳朵又大又圓、長在頭頂兩側偏外 → 比 v001 大一圈、往外移
+    sphere("Ear",      (0.225 * s, -0.25, 0.955), (0.11, 0.045, 0.10), (0, 28 * s, -10 * s), SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
+    sphere("EarInner", (0.225 * s, -0.285, 0.95), (0.075, 0.02, 0.065), (0, 28 * s, -10 * s), FLESH, seg=10, rings=6, mask=MASK_SECONDARY)
+    # 鬍鬚肉墊：兩顆蓬蓬的圓墊（參考照片的口鼻兩側），稍微往下、往外，讓臉變成上寬下窄的「心形」
+    sphere("Muzzle",   (0.05 * s, -0.56, 0.645), (0.06, 0.04, 0.048), (0, 0, 15 * s), FLESH, seg=12, rings=6)
+    # 淚痕：從內眼角往下、沿著鼻樑兩側的深色細線——幼獅臉上最有辨識度的記號
+    tear = [Vector((0.085 * s, -0.565, 0.70)), Vector((0.07 * s, -0.578, 0.675)), Vector((0.06 * s, -0.585, 0.66))]
+    curve("TearMark", tear, [1.0, 0.8, 0.5], 0.0055, ROSE)["mask"] = MASK_MARK
 
-sphere("Chin", (0, -0.548, 0.605), (0.04, 0.03, 0.03), color=FLESH, seg=10, rings=6)
+# 口鼻：在兩顆肉墊後面加一塊微微隆起的「口鼻底座」，讓臉的下半部往前一點（照片的口鼻比較長）
+sphere("Snout", (0, -0.535, 0.665), (0.085, 0.05, 0.07), color=FLESH, seg=12, rings=6, mask=MASK_SECONDARY)
+# 鼻樑：從兩眼之間往下到鼻子的一條稍微隆起的皮（主色）
+sphere("Bridge", (0, -0.56, 0.715), (0.03, 0.03, 0.05), color=SKIN, seg=10, rings=6, mask=MASK_PRIMARY)
+sphere("Chin", (0, -0.548, 0.598), (0.038, 0.03, 0.028), color=FLESH, seg=10, rings=6)
 
-# 鼻子：倒三角形。圓錐只給 3 個頂點就是三角形；轉 90° 讓它面向前方，再轉 180° 讓尖角朝下
-bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.034, radius2=0.012, depth=0.022,
-                                location=(0, -0.592, 0.692))
-nose = put(bpy.context.active_object, "Nose", (1, 0.7, 1), (90, 0, 180), ROSE, mask=MASK_ROSE)
+# 鼻子：寬寬的倒三角形（參考照片的鼻子又寬又深）。圓錐給 3 個頂點就是三角形。
+# 旋轉：先繞 X 轉 90° 讓圓錐的軸朝前（−Y），這時三角形有一個角朝 +X（側邊）；
+#       再繞 Y 轉 90°，把那個角轉到正下方 → 倒三角。X 方向拉寬一點
+bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.042, radius2=0.016, depth=0.024,
+                                location=(0, -0.598, 0.69))
+nose = put(bpy.context.active_object, "Nose", (0.95, 0.7, 1.15), (90, 90, 0), ROSE, mask=MASK_ROSE)
+
+# 額頭的小斑紋：照片裡幼獅額頭有一些深色的小點（點綴在毛帽前面）
+# 跟身體的斑點同一招：算出頭表面上的點和法線，讓小圓片貼著皮（v002 初版直接寫座標，結果浮在頭前面）
+def on_ellipsoid(c, h, d, sink=0.99):
+    p = c + Vector((h.x * d.x, h.y * d.y, h.z * d.z)) * sink
+    n = Vector((d.x / h.x, d.y / h.y, d.z / h.z)).normalized()
+    return p, n
+
+def spot(c, h, d, r):
+    p, n = on_ellipsoid(c, h, Vector(d).normalized())
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=4, radius=1, location=p)
+    o = put(bpy.context.active_object, "Spot", (r, r, 0.007), (0, 0, 0), SPOT, mask=MASK_SPOT)
+    o.rotation_mode = 'QUATERNION'
+    o.rotation_quaternion = Vector((0, 0, 1)).rotation_difference(n)   # 圓片的薄邊朝外 → 貼在皮上
+    return o
+
+for d, r in (((0.0, -0.55, 0.83), 0.016), ((-0.13, -0.58, 0.80), 0.013), ((0.13, -0.58, 0.80), 0.013),
+             ((-0.06, -0.66, 0.74), 0.011), ((0.06, -0.66, 0.74), 0.011)):
+    spot(HEAD_C, HEAD_HALF, d, r)
 
 # 嘴：貓科的「ω」形（兩個往下的小彎）。獨立物件、原點在嘴中央 → 吃果子動畫動 Scale Z 就會張嘴
 W, D = 0.042, 0.014
-origin = Vector((0, -0.586, 0.622))
+origin = Vector((0, -0.592, 0.618))
 pts, radii = [], []
 for i in range(13):
     u = -1 + 2 * i / 12                     # -1 … 1
@@ -123,10 +155,26 @@ sphere("Body", BODY_C, BODY_HALF, color=SKIN, seg=20, rings=10)
 # 肚子與胸口：肉色的一塊，從胸口延伸到肚子下面
 sphere("Belly", BODY_C + Vector((0, -0.08, -0.07)), (0.20, 0.27, 0.17), color=FLESH, seg=16, rings=8)
 
+# 身體的斑點：幼獅身上淡淡的斑點（比皮深一點的同色系）。
+# 方法：在身體橢球表面上取點、放一顆壓扁的小圓片，讓它朝向表面的法線方向（第 2 課眼睛貼合臉的原理）。
+# 橢球的法線 = (x/a², y/b², z/c²) 正規化 —— 寫在上面的 on_ellipsoid() 裡
+SPOTS = [  # (方向 x, y, z, 大小) —— 左右錯開、不對稱，看起來比較自然
+    (0.55, -0.20, 0.80, 0.040), (0.75, 0.25, 0.60, 0.034), (0.45, 0.55, 0.70, 0.030), (0.85, -0.15, 0.25, 0.028),
+    (-0.50, -0.05, 0.85, 0.036), (-0.78, 0.35, 0.50, 0.032), (-0.40, 0.62, 0.66, 0.028), (-0.86, -0.25, 0.30, 0.026),
+    (0.10, 0.30, 0.95, 0.030), (-0.15, 0.70, 0.70, 0.026),
+]
+for dx, dy, dz, r in SPOTS:
+    spot(BODY_C, BODY_HALF, (dx, dy, dz), r)
+
 # ---------- 腳（位置跟小羊幼體相同）＋ 圓腳掌＋肉球 ----------
 for s in (1, -1):
     for y in LEG_Y:
-        cylinder("Leg", (LEG_X * s, y, LEG_Z), LEG_R, LEG_LEN, SKIN)["mask"] = MASK_PRIMARY
+        # 腿往上延伸插進身體裡（v001 腿頂剛好碰到身體表面，所以看得到接縫）。
+        # 關節位置（腿的中心線、地面）不變，跟小羊共用骨架不受影響，只是網格多藏一截在身體裡。
+        cylinder("Leg", (LEG_X * s, y, LEG_Z + 0.05), LEG_R, LEG_LEN + 0.10, SKIN)["mask"] = MASK_PRIMARY
+        # 肩膀／大腿：腿頂一顆圓圓的肉，把腿和身體圓滑地接起來（前腿是肩膀、後腿是大腿）
+        thigh = (0.095, 0.11, 0.10) if y > 0 else (0.085, 0.095, 0.095)
+        sphere("Haunch", (LEG_X * s, y, 0.27), thigh, color=SKIN, seg=12, rings=6, mask=MASK_PRIMARY)
         # 圓腳掌：比腿粗一點、往前一點，底部貼地
         paw_c = Vector((LEG_X * s, y - 0.015, 0.05))
         sphere("Paw", paw_c, (0.075, 0.085, 0.05), color=FLESH, seg=12, rings=6)
@@ -137,15 +185,21 @@ for s in (1, -1):
             sphere("Pad", paw_c + Vector((dx, -0.045 + abs(dx) * 0.4, -0.04)), (0.014, 0.014, 0.008),
                    color=PINK, seg=8, rings=4, mask=MASK_PINK)
 
-# ---------- 尾巴：細長的曲線，輕輕往上翹 ----------
+# ---------- 尾巴：Q 版的捲尾巴 ----------
+# 像畫筆一樣「一邊走、一邊轉彎」：每一步往目前的方向走一小段，方向角 θ 一直增加，
+# 步伐越走越短 → 先往後、往上翹，最後往前捲成一個小圈（像問號）。
 tail_pts, tail_r = [], []
-for i in range(10):
-    t = i / 9
-    tail_pts.append(BODY_C + Vector((0.0,
-                                     BODY_HALF.y * 0.9 + 0.26 * t,
-                                     0.02 + 0.30 * t ** 1.6 + 0.05 * math.sin(math.pi * t))))
-    tail_r.append(1.0 - 0.3 * t)
-curve("Tail", tail_pts, tail_r, 0.032, SKIN)
+p = BODY_C + Vector((0, BODY_HALF.y * 0.92, 0.04))
+theta = math.radians(-5)                    # 0° = 往後（+Y），90° = 往上（+Z）
+N = 16
+for i in range(N):
+    t = i / (N - 1)
+    tail_pts.append(p.copy())
+    tail_r.append(1.0 - 0.25 * t)
+    step = 0.045 * (1.0 - 0.45 * t)          # 越走越短 → 捲起來
+    theta += math.radians(15)                # 每一步轉 15°，總共轉約 225°
+    p += Vector((0, math.cos(theta), math.sin(theta))) * step
+curve("Tail", tail_pts, tail_r, 0.036, SKIN)
 tail_tip = tail_pts[-1]
 
 # ---------- 毛（metaball，點綴色）：頭頂一撮、兩頰軟毛、尾巴毛球 ----------
@@ -184,7 +238,7 @@ for k in range(13):
     ball(p, RUFF_R * (1.15 if abs(math.degrees(a)) > 60 else 1.0))
 
 # 尾巴毛球
-for co, r in ((tail_tip, 0.06), (tail_tip + Vector((0, 0.03, 0.04)), 0.045)):
+for co, r in ((tail_tip, 0.055), (tail_tip + Vector((0, -0.025, -0.02)), 0.04)):
     ball(co, r)
 
 # 每個分頁（Layout、Scripting…）都有自己的 3D 視窗，全部切到「實心 + 物件顏色」

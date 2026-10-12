@@ -34,6 +34,7 @@ Write the record in English. Discuss it with the user in their preferred languag
 | Source | Subject | Inspected | Finding and limits | Agreement | User confirmation |
 | --- | --- | --- | --- | --- | --- |
 | none yet | lion cub anatomy | no | general knowledge only; owner may supply preferred photos (Q6) | — | pending |
+| https://img.ltn.com.tw/Upload/news/600/2018/08/10/phprod9RQ.jpg (accessed 2026-10-12, supplied by owner) | real lion cub, frontal | yes | large round ears set wide and high; heart-shaped face narrowing to a longer muzzle with a nose bridge; wide dark nose; puffy cream whisker pads and small white chin; dark tear marks from inner eye corners; small dark forehead marks; thick legs. Proportions are photographic, adapted to chibi (eyes kept as Lamb Baby for S1 consistency). | owner reference for v002 face | used in v002 |
 
 ## Occluded components and internals
 

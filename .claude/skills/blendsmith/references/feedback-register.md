@@ -189,6 +189,8 @@ Evidence: owner feedback in the session that produced `art/blender/lamb_*.py`; r
 | KS-L08 | Cape stuck out like wings; back wool poked through. | Shrinkwrap a draft that starts inside a hull larger than the wool; derive collar and clasps from the cape's own boundary vertices. |
 | KS-L09 | Small parts consumed large triangle budgets (four clasps = 896 triangles). | Low-resolution primitives for parts that are small on screen; spend triangles on the silhouette. |
 | KS-L10 | Viewport showed no colours after running scripts. | Each workspace has its own 3D View; set Solid + Object colour on every saved screen. |
+| KS-L12 | Lion Baby v001: legs only touched the body surface, so a seam showed ("穿幫"). | Push limb meshes into the body and add a joint blob (shoulder/haunch) where they meet; joint positions for the shared skeleton stay unchanged. |
+| KS-L13 | Lion Baby v002 draft: forehead marks placed by hand-typed coordinates floated in front of the head. | Place decals with a surface helper: ellipsoid point plus normal (x/a², y/b², z/c²), orient the disc to the normal. |
 | KS-L11 | Lion Baby: Head/Leg/Ear rendered in the flesh slot because the shared name table mapped them for the lamb (face colour). Found in a mask-material preview render, not by verify. | Species-specific slots are set on the object (`o["mask"]`), which overrides the name table; always render through the mask preview material before delivery. |
 
 ## 2026-10-12 — Lion Baby decisions (owner)
