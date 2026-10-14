@@ -41,7 +41,8 @@ Runtime 以 UnityEngine 參考組件編譯通過；平台端資料表＋RLS＋�
         `Tools/fbx_mask_report.py` 定位並修正（2026-10-07）
   - [x] 離線 Demo（`DemoApp`）：選靈獸（英文名）、8 色、六項服事 ＋1、升等與第 4/12/24 次進化（換幼體→成體→小領袖模型）、
         還原到初始；編輯器直接 Play 或網頁 `#demo` 進入；BeastView 有正式模型時自動改用模型（2026-10-07）
-  - [ ] 三顆小羊 FBX 移到 `Assets/Art/Resources/Beasts/` 並進版控
+  - [x] 小羊幼體／成體／小領袖 FBX 搬進 `Assets/Art/Resources/Beasts/`（美術分支 v001 交付 `c2558da`；遮罩全 OK，
+        三角形 6824／7936／7992）（2026-10-14）
   - [x] 小獅幼體／成體／小領袖 FBX＋花紋貼圖搬進 `Assets/Art/Resources/Beasts/`（來自美術分支 `b0bc82d`；
         遮罩檢查全 OK，三角形 6632／7768／7730）；換色著色器支援花紋貼圖（色槽顏色 × 花紋）；來源記在
         `Assets/Art/LICENSES.md`（2026-10-14）
