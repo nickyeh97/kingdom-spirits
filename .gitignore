@@ -21,6 +21,7 @@
 .vscode/
 *.DS_Store
 mono_crash.*.json
+__pycache__/
 
 # 純 C# 核心測試（dotnet）
 Tools/CoreTests/bin/

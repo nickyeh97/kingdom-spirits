@@ -45,7 +45,7 @@ namespace SpiritBeast.Runtime
                 var go = Instantiate(model, _body);
                 go.transform.localPosition = Vector3.zero;
                 go.transform.localRotation = Quaternion.identity;
-                _modelMaterial = PaletteMaterial.Apply(go, Catalog.FindPalette(palette));
+                _modelMaterial = PaletteMaterial.Apply(go, Catalog.FindPalette(palette), PaletteMaterial.FindPattern(model.name));
                 _body.localScale = Vector3.one * BeastForms.Scale(stage);
             }
             else

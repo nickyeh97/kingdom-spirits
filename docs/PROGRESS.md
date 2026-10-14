@@ -42,6 +42,9 @@ Runtime 以 UnityEngine 參考組件編譯通過；平台端資料表＋RLS＋�
   - [x] 離線 Demo（`DemoApp`）：選靈獸（英文名）、8 色、六項服事 ＋1、升等與第 4/12/24 次進化（換幼體→成體→小領袖模型）、
         還原到初始；編輯器直接 Play 或網頁 `#demo` 進入；BeastView 有正式模型時自動改用模型（2026-10-07）
   - [ ] 三顆小羊 FBX 移到 `Assets/Art/Resources/Beasts/` 並進版控
+  - [x] 小獅幼體／成體／小領袖 FBX＋花紋貼圖搬進 `Assets/Art/Resources/Beasts/`（來自美術分支 `b0bc82d`；
+        遮罩檢查全 OK，三角形 6632／7768／7730）；換色著色器支援花紋貼圖（色槽顏色 × 花紋）；來源記在
+        `Assets/Art/LICENSES.md`（2026-10-14）
   - [ ] 花紋貼圖（展 UV）、骨架與動畫、小獅與鴿子、正式 toon 著色器（描邊）、BeastView 換成正式模型
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
 - [x] P1 平台端第一部分（kingdom-little-leaders v0.6.0，PR #45）：migration＋RLS（本機 Postgres 33 項行為測試全過）、

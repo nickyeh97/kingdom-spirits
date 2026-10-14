@@ -104,7 +104,9 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 第 4、12、24 次服事各進化一次（初生 → 成長 → 茁壯 → 小領袖）；「還原到初始」回到 0 次
 - 靈獸模型放在任一 `Resources` 資料夾的 `Beasts/` 底下，檔名「英文名_形態」：
   `Lamb_Baby.fbx`（階段 1–2）、`Lamb_Adult.fbx`（階段 3）、`Lamb_Leader.fbx`（階段 4）。
-  建議位置 `Assets/Art/Resources/Beasts/`；找不到模型的變體（目前 Dove、Lion）會用幾何體占位
+  位置 `Assets/Art/Resources/Beasts/`；找不到模型的變體（目前 Dove）會用幾何體占位
+- **花紋貼圖**（選用）：同資料夾放「模型名_Pattern.png」（例如 `Lion_Baby_Pattern.png`），會自動乘在色槽顏色上；
+  灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白
 
 ## 美術檢查：配色預覽
 

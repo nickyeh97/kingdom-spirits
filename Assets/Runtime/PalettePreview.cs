@@ -78,7 +78,7 @@ namespace SpiritBeast.Runtime
             {
                 var clone = Instantiate(Model, transform);
                 clone.name = Model.name + "_" + Catalog.Palettes[i].Id;
-                var mat = PaletteMaterial.Apply(clone, Catalog.Palettes[i]);
+                var mat = PaletteMaterial.Apply(clone, Catalog.Palettes[i], PaletteMaterial.FindPattern(Model.name));
                 if (mat != null)
                 {
                     mat.SetFloat("_View", _view);   // 換模型時維持目前的診斷顯示模式
