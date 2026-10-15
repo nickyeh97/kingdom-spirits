@@ -1,6 +1,8 @@
 # 美術產製流程：AI prompt 生成 → Blender 整理
 
 > GDD §10 #7 裁決（2026-09-30）：**先試 AI 以文字 prompt 生成模型、在 Blender 整理；成果不好再買模型素材。**
+>
+> **2026-10-12 更新**：小羊已改用「Blender 程序化腳本」自製並通過交付驗證。之後所有 3D 模型（不論來源）一律依 `.claude/skills/blendsmith` 與 `art/ART_PROFILE.md` 製作與驗收；本文件保留作為 AI 生成／購買素材的備案研究。下方 §5 的規格以美術設定檔為準。
 > 本文件整理可行工具、操作步驟、授權注意事項，以及「成果好不好」的判斷標準。
 
 ## 0. 關於「astro」
@@ -73,7 +75,7 @@ Lion:  a baby lion cub spirit creature with a small soft mane and a gentle smile
 
 - [ ] **整隻 ≤ 8000 三角形（硬上限，含嘴等子網格與配件）**；幼體建議 ≤ 6000（Decimate 修改器）
 - [ ] 單一材質、貼圖 ≤ 1024²
-- [ ] 寫入**頂點色屬性 `Mask`**（`art/blender/finalize_export.py`）：A=1 時 R／G／B＝主／副／點綴色槽，A=0 時 RGB＝固定色；FBX 以 LINEAR 匯出
+- [ ] 寫入**頂點色配色遮罩** `Mask`（`art/blender/finalize_export.py`；規格見 `art/ART_PROFILE.md`）：A=1 時 R／G／B＝主／副／點綴色槽，A=0 時 RGB＝固定色；FBX 以 LINEAR 匯出；每個網格都要展 UV
 - [ ] 原點在腳底、面向 +Z、比例 1 單位＝1 公尺
 - [ ] 綁骨：四足（Lamb、Lion）共用一套、鳥類（Dove）一套，動畫才能跨變體重用
 - [ ] 匯出 FBX 到 `Assets/Art/Beasts/<id>/`，檔名 `<id>_baby.fbx`、`<id>_adult.fbx`
