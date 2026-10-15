@@ -2,14 +2,22 @@
 
 > 跨 session／跨協作者的**進度單一事實來源**。每個 Sprint 結案、需求異動、外部設定完成時必更新。
 
-**現況（2026-10-02）**：**G0 結案**（組長確認）——本機 Web 建置成功、旋轉方塊與 `Fragment OK` 顯示正常、
-網址列片段清除、Unity EditMode 17 項全綠。手機 4G 載入時間待部署後量測（見外部依賴）。下一步：G1。
+**現況（2026-10-15）**：遊戲分支與美術分支已整合進 `main`。**離線 Demo 可展示**（小羊、小獅三階段正式模型＋8 色＋服事升等與進化＋還原），
+**本週先展示給組長與師母**；目前**尚缺 Dove（鴿子）模型**，Demo 以幾何體占位。
+展示後再依序整合與優化：G1 平台串接驗收（migration、`supabase.json`、端到端）→ Dove 三階段 → G2 動畫／toon 著色器 → G3 收尾。
+
+### 下一步（依序）
+
+1. **Demo 展示**（本週，組長、師母）：收集回饋，記進 GDD §10 裁決紀錄
+2. **G1 平台串接驗收**：執行平台 migration、填 `supabase.json`、本機端到端測試（`docs/DEVELOPMENT.md`）
+3. **Dove 三階段**：造型腳本 → `finalize_export.py` → `fbx_mask_report.py` → 搬進 `Assets/Art/Resources/Beasts/`
+4. **G2 優化**：共用骨架與動畫、正式 toon 著色器＋描邊、介面改 UGUI
 
 ## 已完成
 
 - [x] 設計守則搬入（`docs/DESIGN_PRINCIPLES.md`）
 - [x] GDD v0.3（`docs/GDD.md`；§10 七項全數裁決：等級 `count+1`、老師唯讀、不顯示進度條、
-      紀錄時間＝按下儲存的時刻、幼幼班不納入、命名 Phase 2、美術先試 AI prompt；靈獸名稱英文顯示）
+      紀錄時間＝按下儲存的時刻、幼幼班不納入（10-03：幼童班也暫不開放，只開放兒童班）、命名 Phase 2、美術先試 AI prompt；靈獸名稱英文顯示）
 - [x] 美術產製流程研究（`docs/ART_PIPELINE.md`）
 - [x] 專案指引（`CLAUDE.md`）與 karpathy skill
 - [x] G0 程式骨架：
@@ -27,19 +35,41 @@
 - [x] 本機 Web 建置成功（`SpiritBeast.Editor.Build.Web`），`serve Builds/Web` 開啟看到旋轉方塊（2026-10-02）
 - [x] G0 驗收：帶片段開啟顯示 `Fragment OK` 且網址列 `#…` 消失；Unity EditMode 17 項全綠；
       `Assets/Scenes/Main.unity` 已 commit（2026-10-02，組長確認）
-- [ ] G1 核心迴圈（占位美術）：等級/階段/進化規則＋測試、Supabase 讀寫、S0–S6
-- [ ] G2 美術：URP＋toon、3 變體 × 2 網格、動畫、配色遮罩、圖示（先試 AI prompt，見 `docs/ART_PIPELINE.md`）
+- [x] G1 程式：Core（Catalog、GrowthRules、ServiceCard／LogOutcome、Encourager、SupabaseApi）＋測試；
+      Runtime（SupabaseClient、BeastView、IMGUI 流程 S0–S6）；中文字型子集；
+      免授權的 Runtime 編譯檢查（已抓到 `Display` 撞名、漏掉 UnityWebRequest 模組）
+- [ ] **G1 驗收**（Demo 展示後再做）：Unity EditMode 全綠；測試帳號完成「第一次相遇 → ＋1 服事 → 升等 → 第 4 次進化 → 鼓勵語」；
+      換成別人孩子的 id 讀不到
+- [x] **離線 Demo**（`DemoApp`，2026-10-07）：選靈獸（英文名）、8 色、六項服事 ＋1、升等與第 4／12／24 次進化
+      （換幼體 → 成體 → 小領袖模型）、還原到初始；編輯器直接 Play 或網頁 `#demo`。**組長實測小羊、小獅皆正常（2026-10-15）**
+- [ ] G2 美術：URP＋toon、3 變體 × 3 網格、動畫、配色遮罩、圖示
+  - [x] 美術流程：blendsmith 製作規範（`.claude/skills/blendsmith`）、美術設定檔 `art/ART_PROFILE.md`、
+        造型腳本 → `finalize_export.py` → `verify_blend.py`（細節見 `docs/art-worklog/`）
+  - [x] 配色遮罩改為頂點色 `Mask`（GDD §7.2）；Unity 換色著色器 `SpiritBeast/PaletteMask`，支援花紋貼圖（色槽顏色 × 花紋）
+  - [x] 美術檢查工具：配色預覽（8 組並排、Play 中切換模型、診斷顯示）＋自動規格檢查（`ModelSpecRules`）；
+        FBX 頂點色檢查 `Tools/fbx_mask_report.py`（定位小羊幼體全黑＝多一層小寫 mask）
+  - [x] **Lamb**：幼體／成體／小領袖（`art/models/Lamb/`，v001）→ 已搬進 `Assets/Art/Resources/Beasts/`（三角形 6824／7936／7992）
+  - [x] **Lion**：幼體 v004／成體 v007／小領袖 v001（皇冠＋項鍊）（`art/models/Lion/`）→ 已搬進 Unity（含花紋貼圖；
+        三角形 6632／7768／7730）。幼體、小領袖的造型待組長驗收
+  - [ ] **Dove：幼體／成體／小領袖（尚缺，目前 Demo 以幾何體占位）**
+  - [ ] 共用四足骨架＋動畫（待機、開心、進化、揮手、吃果子）
+  - [ ] 正式 toon 著色器＋描邊；固定色 sRGB 偏移處理（ART_PROFILE 待辦）
 - [ ] G3 收尾：慶祝效果、經文池審稿、手冊
-- [ ] P1 平台端（於 `kingdom-little-leaders` repo）：migration＋RLS（`service_card_entries` 不含聚會日欄位、
-      該班老師唯讀）、家長服事卡頁、鼓勵話語、「去看靈獸」連結（僅兒童班／幼童班）
+- [x] P1 平台端第一部分（kingdom-little-leaders v0.6.0，PR #45）：migration＋RLS（本機 Postgres 33 項行為測試全過）、
+      「我的 → 小領袖靈獸」入口（只對兒童班顯示）
+- [x] 修正：Unity 編譯錯誤「找不到 UnityWebRequest」——manifest 補 `com.unity.modules.unitywebrequest`
+      （另加 `animation` 給 FBX 模型）；Runtime 編譯檢查改為只引用 manifest 啟用的模組，已能重現同一組錯誤（2026-10-03）
+- [ ] P1 平台端第二部分：家長服事卡頁（鼓勵話語編輯、歷史檢視與誤登刪除）、手冊章節
 
 ## 外部依賴
 
 - **Unity 6000.3.25f1 的 WebGL 模組**：本機建置前確認已安裝（Hub →「安裝」→ 6000.3.25f1 →「新增模組」）
 - **GitHub Secrets**：`UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD`（Unity 建置）；
   `VERCEL_TOKEN`、`VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`（部署）。步驟見 `docs/DEVELOPMENT.md`
+- **平台 migration `2026-10-02_service_card` 執行**（Supabase SQL Editor）：G1 讀寫的資料表
+- **`Assets/Resources/supabase.json` 填入平台的 Supabase URL 與 anon key**
 - **手機 4G 首次載入 ≤ 10 秒**（G0 遺留驗收）：Vercel 部署設定完成後，以手機開部署網址看右下角秒數
-- 美術：Lamb 幼體 AI 試做（兩個晚上為限），結果決定 AI 或買素材
+- **Dove 三階段模型**（美術）：Demo 與遊戲目前以幾何體占位
 
 ## Sprint 歷程
 
@@ -47,3 +77,6 @@
 | --- | --- | --- | --- |
 | 設計 | GDD v0.3、專案 MD、守則搬入、組長裁決、美術流程研究 | ✅ | `docs/GDD.md`、`docs/ART_PIPELINE.md` |
 | G0 | Unity 骨架、授權片段交接、命令列建置、CI、部署設定 | ✅ 結案（手機載入時間待部署後量測） | `docs/DEVELOPMENT.md` |
+| G1 | 核心迴圈（占位美術）：規則、Supabase 讀寫、S0–S6；平台資料層與入口 | 🟡 程式完成，待實機驗收 | `docs/GDD.md` §9.1 |
+| Demo | 離線展演：選靈獸、8 色、服事 ＋1、進化、還原；小羊／小獅正式模型 | ✅ 組長實測正常，本週展示（缺 Dove） | `docs/DEVELOPMENT.md`「離線 Demo」 |
+| 整合 | 遊戲分支＋美術分支合併進 `main`（2026-10-15） | ✅ | — |

@@ -5,6 +5,7 @@
 *.asset text eol=lf
 *.meta text eol=lf
 *.fbx binary
+*.blend binary
 *.png binary
 *.jpg binary
 *.ttf binary

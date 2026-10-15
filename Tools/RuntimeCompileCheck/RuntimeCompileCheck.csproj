@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    不需要 Unity 授權的編譯檢查：用 NuGet 上的 UnityEngine 模組參考組件編譯 Assets/Core 與 Assets/Runtime。
+    抓得到型別錯誤、撞名（例如自訂類別與 UnityEngine.Display 同名）、語法超過 C# 9、
+    以及「用到 Packages/manifest.json 沒啟用的內建模組」（例如沒加 com.unity.modules.unitywebrequest
+    卻用了 UnityWebRequest）——只引用 manifest 有列的模組，加上 Unity 一定會有的核心模組。
+    抓不到執行期行為，也不檢查 Editor 腳本。參考組件是 2021.3 版，只用它有的 API 才會過；
+    遇到 Unity 6 新增的 API 時，改以 Unity 端 CI 為準。
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>UNITY_WEBGL</DefineConstants>
+    <Manifest>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../Packages/manifest.json'))</Manifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Core/**/*.cs" />
+    <Compile Include="../../Assets/Runtime/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" ExcludeAssets="compile" GeneratePathProperty="true" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+  <PropertyGroup>
+    <UnityLib>$(PkgUnityEngine_Modules)/lib/net45</UnityLib>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 核心：不屬於可開關的內建模組，Unity 專案一定有 -->
+    <Reference Include="$(UnityLib)/UnityEngine.CoreModule.dll" />
+    <Reference Include="$(UnityLib)/UnityEngine.SharedInternalsModule.dll" />
+    <Reference Include="$(UnityLib)/UnityEngine.TextRenderingModule.dll" />
+    <!-- 可開關的內建模組：manifest 有列才引用（新增模組時在這裡補一行） -->
+    <Reference Include="$(UnityLib)/UnityEngine.IMGUIModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.imgui&quot;'))" />
+    <Reference Include="$(UnityLib)/UnityEngine.JSONSerializeModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.jsonserialize&quot;'))" />
+    <Reference Include="$(UnityLib)/UnityEngine.UnityWebRequestModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.unitywebrequest&quot;'))" />
+    <Reference Include="$(UnityLib)/UnityEngine.AnimationModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.animation&quot;'))" />
+  </ItemGroup>
+</Project>

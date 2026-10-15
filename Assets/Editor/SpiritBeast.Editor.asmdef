@@ -1,7 +1,10 @@
 {
     "name": "SpiritBeast.Editor",
     "rootNamespace": "SpiritBeast.Editor",
-    "references": [],
+    "references": [
+        "SpiritBeast.Runtime",
+        "SpiritBeast.Core"
+    ],
     "includePlatforms": [
         "Editor"
     ]

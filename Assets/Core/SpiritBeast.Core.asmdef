@@ -2,5 +2,9 @@
     "name": "SpiritBeast.Core",
     "rootNamespace": "SpiritBeast.Core",
     "references": [],
-    "noEngineReferences": true
+    "noEngineReferences": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ]
 }
