@@ -17,6 +17,7 @@ namespace SpiritBeast.Editor
         public static void Web()
         {
             EnsureMainScene();
+            RenderPipelineSetup.Ensure(true);
             PlayerSettings.companyName = "TBOJ";
             PlayerSettings.productName = "Kingdom Spirits";
             PlayerSettings.WebGL.template = "PROJECT:SpiritBeast";

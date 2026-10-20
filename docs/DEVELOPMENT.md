@@ -18,7 +18,12 @@
 
 2. 用 Unity Hub 或 Unity CLI 開啟本專案資料夾。第一次開啟會產生 `Library/`（不進版控）、
    各檔案的 `.meta` 與 `ProjectSettings/*.asset`——**這些要 commit**（`.meta` 記錄資產 GUID，漏了會讓引用斷掉）。
-3. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
+3. **渲染管線用 URP**（`com.unity.render-pipelines.universal`，已列在 `Packages/manifest.json`）。
+   第一次開專案時 `Assets/Editor/RenderPipelineSetup.cs` 會自動建立 `Assets/Settings/SpiritBeast_URP.asset`
+   （含 Renderer，關 HDR、關陰影）並設成預設管線；也可以手動按選單「**Spirit Beast/設定 URP（卡通著色器）**」。
+   產生的 `Assets/Settings/*` 與 `ProjectSettings/GraphicsSettings.asset` 的變更**要 commit**。
+   畫面全粉紅＝管線沒設好（著色器只在 URP 下運作），按一次上面的選單即可；命令列建置會自動先檢查。
+4. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
 
 ## Supabase 設定（一次性）
 
@@ -118,7 +123,12 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 從 Blender 重新匯出、Unity 重新匯入後，按「**重新載入**」就能看到新版，不必停 Play
 - 「顯示：…」切換診斷模式：遮罩顏色（頂點色原值）、遮罩A（白＝可換色）、不打光
 - 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
-- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
+- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`（URP），公式與 Blender 預覽材質相同；
+  加上兩段卡通明暗（暗面是暖色、不會全黑）與反向外殼描邊。材質上可調：
+  `_ShadowTint`／`_ShadowThreshold`／`_ShadowSoftness`（暗面顏色、明暗交界位置與柔和度）、
+  `_OutlineColor`／`_OutlineWidth`（描邊顏色與粗細，以螢幕高度比例計，遠近一致）；診斷模式下不畫描邊
+- 描邊在零件交界處斷開或有缺口時，代表那裡是硬邊（法線不連續）：在 Blender 對該處做平滑法線，
+  或改用平滑過的描邊法線（G2 待觀察，有需要再做）
 - 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
 
 **模型在預覽裡全黑或顏色怪**：用 FBX 檢查工具直接讀檔（不用開 Unity 或 Blender，Mac 內建 python3 即可）：
