@@ -77,8 +77,11 @@ GDD §7.2 plans one humanoid and one quadruped skeleton shared across species. A
   - Q5 Leader accessory: olive-leaf wreath on the head (plus the shared halo) — OK, or another idea?
   - Q6 Theme: keep the Dove a plain, gentle companion and not a depiction of the Holy Spirit — would the leader / 師母 like to weigh in?
   - Q7 References or route: any dove photos the owner likes? Procedural script (as Lamb/Lion Baby) by default; an AI-generated reference (as Lion Adult v004) only if the first result is weak.
-- User confirmation: **pending.**
+- User confirmation 2026-10-21 (faithful English summary): Q1 OK; Q2 OK; Q3 OK; Q4 option (a) soft scalloped feathers; Q5 OK (olive-leaf wreath); Q6 "just note it for now"; Q7 "make a first version" (procedural script, no references).
 
 ## Basis for starting production
 
-- Status: **awaiting confirmation.** No modelling until the owner answers Q1–Q7 (R04).
+- Status: **confirmed to start** (2026-10-21). Built as Dove_Baby v001.
+- Q6 is recorded as a design note only: the Dove stays a plain, gentle companion; no extra glow beyond the shared stage-4 halo.
+- Colour-slot adjustment found while building (assistant, flagged to the owner): in all 8 palettes the secondary colour is *darker* than the primary (e.g. 雲朵 #E9EEF2 / #A9B6C2 / #3C4A57). A secondary chest would therefore read darker than the body, which is not dove-like. v001 uses primary = head, body, chest; secondary = wings and tail; accent = wing-tip and tail-tip bands (dark, like a rock dove's bands); blush fixed pink instead of accent (a dark accent blush would look like a bruise). Fixed coral beak and feet as confirmed.
+- Stage-2 scalloped pattern (Q4 a): needs a stage switch in the shader (the baby mesh is shared by stages 1–2, and the pattern must appear only from stage 2). Not in v001; follow-up.
