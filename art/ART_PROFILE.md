@@ -41,6 +41,10 @@ Style stays Q (chibi) for every species. Imported models are references for silh
 
 Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) * pattern : RGB`, where `pattern` is the greyscale pattern mask sampled on UV (1 where a mesh has none). A shape script can add point attributes `shade` (0–1; slot channels multiplied, e.g. a darker spine) and `light` (0–1; blend toward the secondary slot, e.g. a pale throat and belly); both give smooth zones that follow palette swaps. FBX exports colours as Linear. Fixed colours need no conversion in the engine (resolved in G2): `Mask` is a `FLOAT_COLOR` attribute holding linear values, the exporter writes them raw (`colors_type='LINEAR'`), Unity reads vertex colours raw, and the project uses Linear colour space, so the engine matches the Blender preview. Keep both export settings; changing either one shifts every fixed colour.
 
+## Preview renders and the Unity preview mode
+
+Review renders are made with `Tools/render_preview.py` (Cycles, sun strength 3 at (50°, 0, −30°), world (0.55, 0.60, 0.65) × 0.6, AgX). Unity has a matching "Blender preview" render mode (button in the palette preview and the offline demo): Lambert + sun shadows + uniform ambient, then Blender's AgX through a LUT baked by Cycles itself (`Tools/bake_agx_lut.py`, identical to Cycles output at 8 bits). Remaining differences: no bounce light or ambient occlusion in Unity, different camera lens. Change both the script and `RenderStyle.cs` together.
+
 ## Pipeline and delivery (R11, R12)
 
 The owner is learning procedural modelling, so **both** the scripts and the verified `.blend` are deliverables.

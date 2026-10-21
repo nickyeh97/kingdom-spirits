@@ -131,6 +131,21 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
   或改用平滑過的描邊法線（G2 待觀察，有需要再做）
 - 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
 
+### 渲染模式：卡通／Blender 預覽
+
+配色預覽與離線 Demo 都有「**渲染：…**」按鈕，可以手動切換（記在 PlayerPrefs，下次開啟維持；正式遊戲固定用卡通）：
+
+- **卡通**：遊戲正式畫面——兩段明暗＋描邊，用場景原本的燈光與奶油色背景
+- **Blender 預覽**：跟美術檢查用的 Cycles 預覽圖（`docs/art-worklog/` 的圖）一致，方便對照「Blender 裡看到的」和「Unity 裡看到的」：
+  - 燈光、環境光、背景、色調都換成算圖的設定：太陽強度 3／π、白光、同一個方向，太陽會投影；
+    環境光＝Blender 世界顏色 (0.55, 0.60, 0.65) × 0.6；灰色背景；不畫描邊
+  - 色調用 Blender 的 **AgX**：`Assets/Resources/Shaders/AgX_Lut.png` 是用 Blender 4.2 Cycles 實際算出來的查找表
+    （`Tools/bake_agx_lut.py`，跟 Cycles 直接輸出逐值比對相同）；匯入設定由 `AgxLutImporter` 自動設好（關 sRGB、不壓縮）
+  - **仍會有的差異**：Cycles 有反彈光與環境遮蔽（頭下、腿間比較暗），Unity 的環境光是均勻的，這些凹處會稍亮；
+    相機鏡頭不同（Blender 60mm），構圖不會一樣
+  - 算圖腳本 `Tools/render_preview.py` 是基準：改了它的燈光／世界設定，`Assets/Runtime/RenderStyle.cs` 的常數也要一起改
+- 對照時建議在配色預覽按「停止轉動」，並選單看一組配色（雲朵＝算圖用的 p8）
+
 **模型在預覽裡全黑或顏色怪**：用 FBX 檢查工具直接讀檔（不用開 Unity 或 Blender，Mac 內建 python3 即可）：
 
 ```bash

@@ -39,6 +39,7 @@ namespace SpiritBeast.Runtime
             if (_camera == null) _camera = new GameObject("Main Camera").AddComponent<Camera>();
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = new Color(0.99f, 0.96f, 0.89f);
+            RenderStyle.Init(_camera);
 
             Models.RemoveAll(m => m == null);
             if (Model == null && Models.Count > 0) Model = Models[0];
@@ -225,6 +226,8 @@ namespace SpiritBeast.Runtime
                 _view = (_view + 1) % ViewNames.Length;
                 foreach (var m in _materials) m.SetFloat("_View", _view);
             }
+            // 渲染模式：卡通／Blender 預覽（跟美術檢查的 Cycles 算圖一致；對照時建議先「停止轉動」）
+            if (GUI.Button(new Rect(bx + 298 * s, y, 150 * s, sw), "渲染：" + RenderStyle.Label)) RenderStyle.Toggle();
 
             // 模型切換：同資料夾的模型各一顆按鈕，目前的加框；「重新載入」給 Blender 重新匯出後用
             float my = y + sw + 8 * s, mx = x;

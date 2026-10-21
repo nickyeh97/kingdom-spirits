@@ -9,7 +9,8 @@ namespace SpiritBeast.Editor
     /// 確保專案使用 URP（卡通著色器 SpiritBeast/PaletteMask 只在 URP 下運作）。
     /// 還沒設定時自動建立 Assets/Settings/SpiritBeast_URP.asset（含 Renderer）並設為預設管線；
     /// 已經有管線就不動。開專案時自動執行一次，命令列建置（Build.Web）也會先呼叫。
-    /// 手機取向：關 HDR、關陰影（卡通明暗不需要投影，省效能）。產生的 .asset 要進版控。
+    /// 手機取向：關 HDR。主光源投影「允許」但平常不開：只有「Blender 預覽」渲染模式的太陽會投影
+    /// （RenderStyle 在卡通模式把燈光的投影關掉，URP 就不畫陰影圖）。產生的 .asset 要進版控。
     /// </summary>
     [InitializeOnLoad]
     public static class RenderPipelineSetup
@@ -42,10 +43,11 @@ namespace SpiritBeast.Editor
 
                 asset = UniversalRenderPipelineAsset.Create(renderer);
                 asset.supportsHDR = false;
-                asset.shadowDistance = 0f;
+                asset.shadowDistance = 8f;
                 AssetDatabase.CreateAsset(asset, AssetPath);
                 var so = new SerializedObject(asset);
-                SetBool(so, "m_MainLightShadowsSupported", false);
+                SetBool(so, "m_MainLightShadowsSupported", true);
+                SetBool(so, "m_SoftShadowsSupported", true);
                 SetBool(so, "m_AdditionalLightShadowsSupported", false);
                 so.ApplyModifiedPropertiesWithoutUndo();
                 AssetDatabase.SaveAssets();
