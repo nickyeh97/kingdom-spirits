@@ -170,6 +170,11 @@ body = max((o for o in bpy.data.objects if o.type == 'MESH' and o is not mouth),
 bpy.context.view_layer.objects.active = body
 bpy.ops.object.join()
 body.name = NAME
+# 原點一律放回世界原點（腳底中央）：合併後的原點是「主體零件」的原點，
+# 主體若是建在別處的零件（例如小鴿幼體最大的零件是頭，原點在頭中心），進引擎後整隻會往下沉
+bpy.context.scene.cursor.location = (0, 0, 0)
+select_only(body)
+bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 
 # 嘴保持獨立（要做張嘴動畫），設成身體的子物件，一起移動
 if mouth:

@@ -33,6 +33,7 @@ namespace SpiritBeast.Runtime
             // 小領袖約 1.63 公尺：頭頂不碰上方按鈕、腳不碰下方色票
             _camera.transform.position = new Vector3(0f, 1.0f, -3.2f);
             _camera.transform.LookAt(new Vector3(0f, 0.95f, 0f));
+            RenderStyle.Init(_camera);
 
             _beast = new GameObject("Beast").AddComponent<BeastView>();
             _encourager = new Encourager(null, _random);
@@ -132,6 +133,8 @@ namespace SpiritBeast.Runtime
                     _beast.Show(_variant, _palette, _card.Stage);
                 }
             }
+            // 渲染模式：卡通（遊戲畫面）／Blender 預覽（跟美術算圖一致，對照模型用）
+            if (GUI.Button(R(300, 4, 96, 26), "渲染：" + RenderStyle.Label, _button)) RenderStyle.Toggle();
             // 點靈獸：跳一下
             if (GUI.Button(R(0, 96, 400, top - 150), GUIContent.none, GUIStyle.none)) _beast.Hop();
 

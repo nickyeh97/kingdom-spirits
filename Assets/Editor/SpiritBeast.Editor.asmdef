@@ -3,7 +3,9 @@
     "rootNamespace": "SpiritBeast.Editor",
     "references": [
         "SpiritBeast.Runtime",
-        "SpiritBeast.Core"
+        "SpiritBeast.Core",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"

@@ -18,7 +18,12 @@
 
 2. 用 Unity Hub 或 Unity CLI 開啟本專案資料夾。第一次開啟會產生 `Library/`（不進版控）、
    各檔案的 `.meta` 與 `ProjectSettings/*.asset`——**這些要 commit**（`.meta` 記錄資產 GUID，漏了會讓引用斷掉）。
-3. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
+3. **渲染管線用 URP**（`com.unity.render-pipelines.universal`，已列在 `Packages/manifest.json`）。
+   第一次開專案時 `Assets/Editor/RenderPipelineSetup.cs` 會自動建立 `Assets/Settings/SpiritBeast_URP.asset`
+   （含 Renderer，關 HDR、關陰影）並設成預設管線；也可以手動按選單「**Spirit Beast/設定 URP（卡通著色器）**」。
+   產生的 `Assets/Settings/*` 與 `ProjectSettings/GraphicsSettings.asset` 的變更**要 commit**。
+   畫面全粉紅＝管線沒設好（著色器只在 URP 下運作），按一次上面的選單即可；命令列建置會自動先檢查。
+4. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
 
 ## Supabase 設定（一次性）
 
@@ -104,7 +109,7 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 第 4、12、24 次服事各進化一次（初生 → 成長 → 茁壯 → 小領袖）；「還原到初始」回到 0 次
 - 靈獸模型放在任一 `Resources` 資料夾的 `Beasts/` 底下，檔名「英文名_形態」：
   `Lamb_Baby.fbx`（階段 1–2）、`Lamb_Adult.fbx`（階段 3）、`Lamb_Leader.fbx`（階段 4）。
-  位置 `Assets/Art/Resources/Beasts/`；找不到模型的變體（目前 Dove）會用幾何體占位；目前已有 Lamb、Lion 各三顆
+  位置 `Assets/Art/Resources/Beasts/`；找不到模型的形態會用幾何體占位；目前 Lamb、Lion、Dove 各三顆都已就位
 - **花紋貼圖**（選用）：同資料夾放「模型名_Pattern.png」（例如 `Lion_Baby_Pattern.png`），會自動乘在色槽顏色上；
   灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白
 
@@ -118,8 +123,32 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 從 Blender 重新匯出、Unity 重新匯入後，按「**重新載入**」就能看到新版，不必停 Play
 - 「顯示：…」切換診斷模式：遮罩顏色（頂點色原值）、遮罩A（白＝可換色）、不打光
 - 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
-- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
+- 「**錄影模式**」：隱藏所有按鈕與規格檢查，只留模型和每隻下方的配色名稱，方便錄影給大家看；
+  **點畫面任一處或按 H** 回到一般畫面（Game 視窗要先點一下取得焦點，H 才有反應）。
+  錄影方式：macOS 按 `⌘⇧5` 選「錄製選取的部分」框住 Game 視窗；或安裝 Unity Recorder 套件
+  （Package Manager → Unity Registry → Recorder，Window → General → Recorder）直接輸出固定解析度的 MP4
+- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`（URP），公式與 Blender 預覽材質相同；
+  加上兩段卡通明暗（暗面是暖色、不會全黑）與反向外殼描邊。材質上可調：
+  `_ShadowTint`／`_ShadowThreshold`／`_ShadowSoftness`（暗面顏色、明暗交界位置與柔和度）、
+  `_OutlineColor`／`_OutlineWidth`（描邊顏色與粗細，以螢幕高度比例計，遠近一致）；診斷模式下不畫描邊
+- 描邊在零件交界處斷開或有缺口時，代表那裡是硬邊（法線不連續）：在 Blender 對該處做平滑法線，
+  或改用平滑過的描邊法線（G2 待觀察，有需要再做）
 - 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
+
+### 渲染模式：卡通／Blender 預覽
+
+配色預覽與離線 Demo 都有「**渲染：…**」按鈕，可以手動切換（記在 PlayerPrefs，下次開啟維持；正式遊戲固定用卡通）：
+
+- **卡通**：遊戲正式畫面——兩段明暗＋描邊，用場景原本的燈光與奶油色背景
+- **Blender 預覽**：跟美術檢查用的 Cycles 預覽圖（`docs/art-worklog/` 的圖）一致，方便對照「Blender 裡看到的」和「Unity 裡看到的」：
+  - 燈光、環境光、背景、色調都換成算圖的設定：太陽強度 3／π、白光、同一個方向，太陽會投影；
+    環境光＝Blender 世界顏色 (0.55, 0.60, 0.65) × 0.6；灰色背景；不畫描邊
+  - 色調用 Blender 的 **AgX**：`Assets/Resources/Shaders/AgX_Lut.png` 是用 Blender 4.2 Cycles 實際算出來的查找表
+    （`Tools/bake_agx_lut.py`，跟 Cycles 直接輸出逐值比對相同）；匯入設定由 `AgxLutImporter` 自動設好（關 sRGB、不壓縮）
+  - **仍會有的差異**：Cycles 有反彈光與環境遮蔽（頭下、腿間比較暗），Unity 的環境光是均勻的，這些凹處會稍亮；
+    相機鏡頭不同（Blender 60mm），構圖不會一樣
+  - 算圖腳本 `Tools/render_preview.py` 是基準：改了它的燈光／世界設定，`Assets/Runtime/RenderStyle.cs` 的常數也要一起改
+- 對照時建議在配色預覽按「停止轉動」，並選單看一組配色（雲朵＝算圖用的 p8）
 
 **模型在預覽裡全黑或顏色怪**：用 FBX 檢查工具直接讀檔（不用開 Unity 或 Blender，Mac 內建 python3 即可）：
 

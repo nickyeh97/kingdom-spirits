@@ -13,7 +13,6 @@ namespace SpiritBeast.Runtime
         static readonly float[] StageScale = { 0.75f, 0.9f, 1.05f, 1.2f };
 
         Transform _body;
-        Shader _shader;
         float _hopTime = -1f;
         float _spinTime = -1f;
         float _evolveTime = -1f;
@@ -21,12 +20,6 @@ namespace SpiritBeast.Runtime
         int _pendingStage;
 
         public bool Evolving => _evolveTime >= 0f;
-
-        void Awake()
-        {
-            _shader = Shader.Find("Legacy Shaders/Diffuse");
-            if (_shader == null) _shader = Shader.Find("Sprites/Default");
-        }
 
         Material _modelMaterial;
 
@@ -164,9 +157,9 @@ namespace SpiritBeast.Runtime
             go.transform.localScale = scale;
             go.transform.localRotation = rot ?? Quaternion.identity;
             go.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>(mesh + ".fbx");
-            if (!_materials.TryGetValue(color, out var mat) && _shader != null)
+            if (!_materials.TryGetValue(color, out var mat))
             {
-                mat = new Material(_shader) { color = color };
+                mat = PaletteMaterial.Flat(color);
                 _materials[color] = mat;
             }
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;
