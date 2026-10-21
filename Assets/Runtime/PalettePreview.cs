@@ -25,6 +25,7 @@ namespace SpiritBeast.Runtime
         Camera _camera;
         int _focus = -1;   // -1＝八隻全部；0–7＝單看一組
         bool _turn = true;
+        bool _clean;     // 錄影模式：只留模型與配色名稱
         float _facing = 180f;
         float _spacing = 1f;
         int _view;   // 對應著色器 _View：0 正常、1 遮罩顏色、2 遮罩 A、3 不打光
@@ -206,6 +207,19 @@ namespace SpiritBeast.Runtime
                 _style.normal.textColor = _label.normal.textColor = new Color(0.29f, 0.23f, 0.16f);
             }
 
+            // 錄影模式：按鈕、規格檢查都不畫，只留每隻下方的配色名稱；點畫面任一處或按 H 回來
+            if (_clean)
+            {
+                bool back = Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.H;
+                if (GUI.Button(new Rect(0, 0, Screen.width, Screen.height), GUIContent.none, GUIStyle.none) || back)
+                {
+                    _clean = false;
+                    Event.current.Use();
+                }
+                PaletteNames(s);
+                return;
+            }
+
             float x = 12 * s, y = 10 * s, sw = 44 * s;
             if (GUI.Button(new Rect(x, y, 70 * s, sw), "全部")) { _focus = -1; Layout(); }
             for (int i = 0; i < Catalog.Palettes.Count; i++)
@@ -228,6 +242,7 @@ namespace SpiritBeast.Runtime
             }
             // 渲染模式：卡通／Blender 預覽（跟美術檢查的 Cycles 算圖一致；對照時建議先「停止轉動」）
             if (GUI.Button(new Rect(bx + 298 * s, y, 150 * s, sw), "渲染：" + RenderStyle.Label)) RenderStyle.Toggle();
+            if (GUI.Button(new Rect(bx + 454 * s, y, 100 * s, sw), "錄影模式")) _clean = true;
 
             // 模型切換：同資料夾的模型各一顆按鈕，目前的加框；「重新載入」給 Blender 重新匯出後用
             float my = y + sw + 8 * s, mx = x;
@@ -254,7 +269,12 @@ namespace SpiritBeast.Runtime
                 GUI.contentColor = old;
             }
 
-            // 每隻下方標配色名稱
+            PaletteNames(s);
+        }
+
+        // 每隻下方標配色名稱
+        void PaletteNames(float s)
+        {
             for (int i = 0; i < _clones.Count; i++)
             {
                 if (!_clones[i].activeSelf) continue;

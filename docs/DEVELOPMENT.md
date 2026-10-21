@@ -123,6 +123,10 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 從 Blender 重新匯出、Unity 重新匯入後，按「**重新載入**」就能看到新版，不必停 Play
 - 「顯示：…」切換診斷模式：遮罩顏色（頂點色原值）、遮罩A（白＝可換色）、不打光
 - 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
+- 「**錄影模式**」：隱藏所有按鈕與規格檢查，只留模型和每隻下方的配色名稱，方便錄影給大家看；
+  **點畫面任一處或按 H** 回到一般畫面（Game 視窗要先點一下取得焦點，H 才有反應）。
+  錄影方式：macOS 按 `⌘⇧5` 選「錄製選取的部分」框住 Game 視窗；或安裝 Unity Recorder 套件
+  （Package Manager → Unity Registry → Recorder，Window → General → Recorder）直接輸出固定解析度的 MP4
 - 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`（URP），公式與 Blender 預覽材質相同；
   加上兩段卡通明暗（暗面是暖色、不會全黑）與反向外殼描邊。材質上可調：
   `_ShadowTint`／`_ShadowThreshold`／`_ShadowSoftness`（暗面顏色、明暗交界位置與柔和度）、
