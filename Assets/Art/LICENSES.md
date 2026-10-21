@@ -7,4 +7,4 @@
 | `Resources/Beasts/Lamb_Baby.fbx`、`Lamb_Adult.fbx`、`Lamb_Leader.fbx` | 本專案以 Blender 程序化腳本建模（美術分支 `claude/nice-pasteur-ubt4t1` 的 `art/blender/lamb_*.py`＋`finalize_export.py`，v001 交付 commit `c2558da`，2026-10-14 搬入） | 本專案原創 | 沒有花紋貼圖 |
 | `Resources/Beasts/Lion_Baby.fbx`、`Lion_Adult.fbx`、`Lion_Leader.fbx` | 本專案以 Blender 程序化腳本建模（分支 `claude/nice-pasteur-ubt4t1` 的 `art/blender/lion_*.py`＋`finalize_export.py`，commit `b0bc82d`，2026-10-14 搬入） | 本專案原創 | Q 版造型；Meshy 社群的 CC0「Lion Cub」模型只當輪廓與毛色參考，未收進遊戲（見該分支 `art/source/LICENSE.md`） |
 | `Resources/Beasts/Lion_*_Pattern.png` | 同上，收尾腳本以程序化雜訊烘焙的花紋遮罩（512²，灰階，sRGB） | 本專案原創 | 著色器把它乘在色槽顏色上，做出獅子毛色的深淺 |
-| `Resources/Beasts/Dove_Baby.fbx`、`Dove_Adult.fbx`、`Dove_Leader.fbx` | 本專案以 Blender 程序化腳本建模（`art/blender/dove_baby.py`、`dove_adult.py`、`dove_leader.py`＋`finalize_export.py`，v001，2026-10-21） | 本專案原創 | 沒有花紋貼圖（第 2 階段羽毛鱗紋待做）；沒有參考任何外部模型 |
+| `Resources/Beasts/Dove_Baby.fbx`、`Dove_Adult.fbx`、`Dove_Leader.fbx` | 本專案以 Blender 程序化腳本建模（`art/blender/dove_baby.py`、`dove_adult.py`、`dove_leader.py`＋`finalize_export.py`，幼體 v002、成體與小領袖 v001，2026-10-21） | 本專案原創 | 沒有花紋貼圖（第 2 階段羽毛鱗紋待做）；沒有參考任何外部模型 |
