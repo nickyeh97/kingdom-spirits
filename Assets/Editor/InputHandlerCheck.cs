@@ -13,7 +13,7 @@ namespace SpiritBeast.Editor
     {
         const int OldInputManager = 0;   // 0 舊版、1 新版 Input System、2 兩者
 
-        static InputHandlerCheck() => EditorApplication.delayCall += Check;
+        static InputHandlerCheck() => EditorApplication.delayCall += () => Check();
 
         [MenuItem("Spirit Beast/檢查輸入設定")]
         static void Menu()
