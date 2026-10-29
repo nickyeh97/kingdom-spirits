@@ -22,6 +22,9 @@ namespace SpiritBeast.Runtime
         public bool Evolving => _evolveTime >= 0f;
 
         Material _modelMaterial;
+        // 有骨架動作的模型（FBX 以 Legacy 動畫匯入）：用名稱播放；沒有動作的模型用下面的程式動作（跳、轉圈）
+        Animation _anim;
+        string _idleClip, _happyClip;
 
         public void Show(string variant, string palette, int stage)
         {
@@ -41,17 +44,52 @@ namespace SpiritBeast.Runtime
                 _modelMaterial = PaletteMaterial.Apply(go, Catalog.FindPalette(palette), PaletteMaterial.FindPattern(model.name));
                 if (_modelMaterial != null) _modelMaterial.SetFloat("_PatternStrength", BeastForms.PatternStrength(variant, stage));
                 _body.localScale = Vector3.one * BeastForms.Scale(stage);
+                SetupAnimation(go);
             }
             else
             {
+                _anim = null;
                 Build(variant, Catalog.FindPalette(palette), stage);
                 _body.localScale = Vector3.one * StageScale[stage - 1];
             }
         }
 
-        public void Hop() => _hopTime = 0f;
+        public void Hop()
+        {
+            if (!PlayHappy()) _hopTime = 0f;
+        }
 
-        public void Celebrate() { _hopTime = 0f; _spinTime = 0f; }
+        public void Celebrate()
+        {
+            if (!PlayHappy()) _hopTime = 0f;
+            _spinTime = 0f;
+        }
+
+        /// <summary>
+        /// 找出模型裡的動作（Blender 的 Action 匯出成 FBX 後叫「Rig|Idle」這種名字，所以比對「|」後面）並開始待機循環
+        /// </summary>
+        void SetupAnimation(GameObject go)
+        {
+            _anim = go.GetComponentInChildren<Animation>();
+            _idleClip = _happyClip = null;
+            if (_anim == null) return;
+            foreach (AnimationState st in _anim)
+            {
+                var n = st.name.Substring(st.name.LastIndexOf('|') + 1);
+                if (n == "Idle") { _idleClip = st.name; st.wrapMode = WrapMode.Loop; }
+                else if (n == "Happy") { _happyClip = st.name; st.wrapMode = WrapMode.Once; }
+            }
+            if (_idleClip == null) { _anim = null; return; }
+            _anim.Play(_idleClip);
+        }
+
+        bool PlayHappy()
+        {
+            if (_anim == null || _happyClip == null) return false;
+            _anim.CrossFade(_happyClip, 0.1f);
+            _anim.CrossFadeQueued(_idleClip, 0.2f);
+            return true;
+        }
 
         /// <summary>進化過場：先放大發光，再換成新階段的樣子（約 3 秒）</summary>
         public void Evolve(string variant, string palette, int newStage)
@@ -64,7 +102,8 @@ namespace SpiritBeast.Runtime
         {
             if (_body == null) return;
             float t = Time.time;
-            float y = Mathf.Sin(t * 2f) * 0.05f;
+            // 有骨架動作時呼吸由 Idle 動作負責，不再整隻上下飄
+            float y = _anim != null ? 0f : Mathf.Sin(t * 2f) * 0.05f;
             if (_hopTime >= 0f)
             {
                 _hopTime += Time.deltaTime;
