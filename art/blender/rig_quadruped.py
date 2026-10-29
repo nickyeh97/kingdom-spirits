@@ -103,11 +103,11 @@ JOINTS["Dove_Baby"] = {
     "ear": None, "front": None,
     "hind":  [(0.09, -0.06, 0.24), (0.09, -0.04, 0.13), (0.09, -0.06, 0.03), (0.09, -0.13, 0.02)],   # 腿關節往後彎（鳥的「膝」其實是腳踝）
     "wing":  [(0.225, -0.13, 0.49), (0.23, 0.07, 0.41), (0.22, 0.30, 0.30)],   # 肩（翅膀前上方）→ 中間 → 翅尖
-    "wing_box": (0.16, -0.20, 0.22, 0.70), "wingtip_y": 0.17,                 # 翅膀零件：|x| > 0.16、y > −0.20、z 0.22–0.70；中心 y > 0.17 算翅尖
+    "wing_box": (0.16, -0.20, 0.22, 0.70),                   # 翅膀零件：|x| > 0.16、y > −0.20、z 0.22–0.70
     "tail":  [(0, 0.22, 0.34), (0, 0.45, 0.37)], "tail_box": (0.15, 0.27),     # 尾羽零件：|x| < 0.15、中心 y > 0.27
     "head_center": (0, -0.33, 0.72), "head_radii": (0.33, 0.33, 0.31),
     "eye": (0.12, -0.545, 0.74), "eye_radii": (0.075, 0.05, 0.095),
-    "toy": (0, -0.27, 0.06), "toy_radius": 0.06,
+    "toy": (-0.08, -0.21, 0.06), "toy_radius": 0.06,   # 右腳（−x 那隻）正前方，踢得到
     "style": "gentle", "k": 1.0, "toy_roll": 0.25, "sleep_drop": 0.08,
 }
 JOINTS["Dove_Adult"] = {
@@ -119,12 +119,12 @@ JOINTS["Dove_Adult"] = {
     "ear": None, "front": None,
     "hind":  [(0.12, 0.0, 0.36), (0.12, 0.02, 0.20), (0.12, -0.02, 0.04), (0.12, -0.10, 0.02)],
     "wing":  [(0.26, -0.18, 0.68), (0.27, 0.10, 0.60), (0.25, 0.45, 0.48)],
-    "wing_box": (0.18, -0.25, 0.35, 0.90), "wingtip_y": 0.26,
+    "wing_box": (0.18, -0.25, 0.35, 0.90),
     "tail":  [(0, 0.33, 0.50), (0, 0.70, 0.49)], "tail_box": (0.15, 0.40),
     # 頭的範圍偏上：小領袖的項鍊（胸口）不能被算進頭裡；葉冠、嘴喙在裡面
     "head_center": (0, -0.40, 1.13), "head_radii": (0.34, 0.34, 0.26),
     "eye": (0.1056, -0.5956, 1.0976), "eye_radii": (0.066, 0.044, 0.084),
-    "toy": (0, -0.36, 0.07), "toy_radius": 0.07,
+    "toy": (-0.10, -0.22, 0.07), "toy_radius": 0.07,
     "style": "gentle", "k": 1.5, "toy_roll": 0.35, "sleep_drop": 0.10,
 }
 JOINTS["Dove_Leader"] = JOINTS["Dove_Adult"]       # 小領袖＝成體＋葉冠、長尾羽、項鍊：骨架一樣
@@ -298,11 +298,11 @@ BIRD = J.get("kind") == "bird"
 if J.get("ear"):
     for side, f in (("L", lambda p: p), ("R", mirror)):
         bone(f"ear.{side}", f(J["ear"][0]), f(J["ear"][1]), parent="head")
-if BIRD:                                    # 翅膀：肩 → 中間 → 翅尖，掛在背上
+if BIRD:                                    # 翅膀：一根骨頭從肩膀到翅尖，掛在背上
+    # 整片翅膀（翅膀本體＋末端飛羽）只跟這一根骨頭：v004 試做時翅尖另外一根骨頭，揮手時飛羽跟翅膀分開（組長發現）
     for side, f in (("L", lambda p: p), ("R", mirror)):
         w = [f(q) for q in J["wing"]]
-        bone(f"wing.{side}", w[0], w[1], parent="spine")
-        bone(f"wingtip.{side}", w[1], w[2], parent=f"wing.{side}", connect=True)
+        bone(f"wing.{side}", w[0], w[2], parent="spine")
 for side, f in (("L", lambda p: p), ("R", mirror)):
     e = f(J["eye"])
     bone(f"eye.{side}", e, (e[0], e[1], e[2] + 0.05), parent="head")     # 張開的眼睛（睡覺時縮小）
@@ -382,7 +382,7 @@ D = np.stack([dist_to_segment(co, a, b) for a, b in seg], axis=1)          # 頂
 # v006 沒排除，鼻子離 mouth 骨很近，分到一半權重 → 吃果子張嘴時鼻子被拉長（組長 2026-10-29 發現）
 PART_BONES = {"mouth", "toy", "eye.L", "eye.R", "lid.L", "lid.R"}
 if BIRD:                                    # 翅膀、尾羽骨只帶指定的整塊零件（拍翅膀時不會扯到身體側面）
-    PART_BONES |= {"wing.L", "wing.R", "wingtip.L", "wingtip.R", "tail.1"}
+    PART_BONES |= {"wing.L", "wing.R", "tail.1"}
 for i, b in enumerate(deform):
     if b.name in PART_BONES:
         D[:, i] = np.inf
@@ -404,6 +404,28 @@ for e in me.edges:
     if a != b: parent[a] = b
 roots = np.array([find(i) for i in range(len(co))])
 names = [b.name for b in deform]
+
+# 鳥的腿藏在肚子下面：肚子的頂點離大腿骨很近，會分到腿骨權重 → 腿一彎肚子就被拉尖（v004 組長發現：跳、睡覺時）。
+# 所以鳥的腿骨只帶「腿和腳趾」（整塊都在髖關節高度以下的零件），身體完全不跟腿骨；腿也不跟身體的骨頭。
+if BIRD:
+    leg_bones = [i for i, n in enumerate(names) if n.split(".")[0] in ("thigh", "shin", "foot")]
+    hip_z = J["hind"][0][2]
+    leg_part = np.zeros(len(co), dtype=bool)
+    for rt in np.unique(roots):
+        m = roots == rt
+        if not m[N_BODY:].any() and co[m][:, 2].max() < hip_z + 0.02:
+            leg_part |= m
+    D2 = D.copy()
+    D2[np.ix_(~leg_part, leg_bones)] = np.inf
+    other = [i for i in range(len(names)) if i not in leg_bones]
+    D2[np.ix_(leg_part, other)] = np.inf
+    W = np.zeros_like(D2)
+    near = np.argsort(D2, axis=1)[:, :2]
+    for k in range(2):
+        idx = near[:, k]
+        d = D2[np.arange(len(co)), idx]
+        W[np.arange(len(co)), idx] = np.where(np.isfinite(d), 1.0 / (d + 0.01) ** 4, 0.0)
+    W /= W.sum(axis=1, keepdims=True)
 hc, hr = np.array(J["head_center"]), np.array(J["head_radii"])
 r = np.linalg.norm((co - hc) / hr, axis=1)
 w_head = np.clip((1.1 - r) / 0.2, 0, 1)                                     # 頭裡面＝1，邊緣 0.2 的範圍平滑過渡
@@ -436,7 +458,7 @@ if BIRD:
         target = None
         if abs(c[0]) > xmin and c[1] > ymin and zmin < c[2] < zmax:
             side = "L" if c[0] > 0 else "R"
-            target = f"wingtip.{side}" if c[1] > J["wingtip_y"] else f"wing.{side}"
+            target = f"wing.{side}"
         elif abs(c[0]) < tx and c[1] > ty:
             target = "tail.1"
         if target:
@@ -550,8 +572,8 @@ def smooth(act, cyclic=False):
 # （脊椎、尾巴、頭的骨頭是沿著身體方向放的，所以「左右擺」用 Z）
 FEET = [c for (_, _, _, c) in LEGS.values()]
 
-def wings(spread=0.0, lift=0.0, tip=0.0, only=None):
-    """鳥的翅膀姿勢（度）：spread＝往外張（繞垂直軸）、lift＝翅尖往上（繞左右軸）、tip＝翅尖再往外彎。
+def wings(spread=0.0, lift=0.0, only=None):
+    """鳥的翅膀姿勢（度）：spread＝往外張（繞垂直軸）、lift＝翅尖往上（繞左右軸）。
     左右兩邊的骨頭方向一樣（roll 0），所以「往外」左邊是負、右邊是正。only＝只動一邊（"L"／"R"）。"""
     out = {}
     if not BIRD:
@@ -560,7 +582,6 @@ def wings(spread=0.0, lift=0.0, tip=0.0, only=None):
         if only and side != only:
             continue
         out[f"wing.{side}"] = {"rot": (lift, 0, sgn * spread)}
-        out[f"wingtip.{side}"] = {"rot": (0, 0, sgn * tip)}
     return out
 
 # Idle（待機，2 秒循環）：呼吸讓身體上下、頭左右輕晃、尾巴擺動、耳朵偶爾動一下；腳掌固定在地上（IK）
@@ -594,7 +615,7 @@ for f, crouch, up, tk, wag, look in ((0, 0, 0, 0, 0, 0), (6, 1, 0, 0, 1, -1), (1
     }
     for c in FEET:                                   # 在空中時腳掌往身體收一點（不會僵直地垂著）
         poses[c] = {"wloc": (0, 0, tuck * tk)}
-    poses.update(wings(spread=30 * up, lift=15 * up, tip=12 * up))    # 鳥：跳起來時張開翅膀
+    poses.update(wings(spread=30 * up, lift=15 * up))                 # 鳥：跳起來時張開翅膀
     key(f, **poses)
 smooth(act)
 
@@ -615,7 +636,7 @@ for f, up, fwd, wave, lean, wag in ((0, 0, 0, 0, 0, 0), (4, 0.45, 0, 0, 0.5, 0.5
            "spine": {"rot": (-6 * lean * AMP, 0, 0)},               # 胸口抬起來
            "head": {"rot": (0, 0, 8 * lean * AMP)},
            "tail.1": {"rot": (0, 0, 20 * wag * AMP)}, "tail.2": {"rot": (0, 0, 12 * wag * AMP)}},
-        **wings(spread=40 * up, lift=25 * up, tip=18 * wave, only="R"))   # 鳥：右翅膀張開往上，翅尖左右揮
+        **wings(spread=40 * up + 12 * wave, lift=25 * up, only="R"))   # 鳥：右翅膀張開往上，整片左右揮
 smooth(act)
 
 # Eat（吃果子，1.5 秒）：低頭、張嘴咬兩下（嘴巴骨上下放大）、抬頭滿足地晃一下
@@ -661,12 +682,13 @@ for f, show, bow, bat_fwd, bat_up, rolled, hop, wag in (
         toy={"scale": HIDDEN if not show else SHUT,
              "wloc": (0, -roll * rolled, 0), "rot": (math.degrees(roll * rolled / R), 0, 0)},
         root={"wloc": (0, 0, 0.07 * hop * AMP)},
-        spine={"rot": (9 * bow * AMP, 0, 0)},                                   # 前低後高
-        neck={"rot": (8 * bow + (18 * bat_up if BIRD else 0), 0, 0)},      # 鳥：低頭用嘴啄球（取代前腳撥球）
-        head={"rot": (6 * bow - 8 * hop + (12 * bat_up if BIRD else 0), 0, 0)},
+        spine={"rot": ((2 if BIRD else 9) * bow * AMP, 0, 0)},                    # 前低後高（鳥只微微前傾）
+        neck={"rot": (8 * bow, 0, 0)}, head={"rot": (6 * bow - 8 * hop, 0, 0)},
+        # 四足：右前腳撥球；鳥：右腳往前踢（組長：用嘴要蹲很低 → 選腳）。重心靠另一隻腳，翅膀微張保持平衡
         **{"hand_ik.R": {"wloc": (0, -0.06 * bat_fwd, 0.07 * bat_up)},            # 抬腳往前撥
+           "foot_ik.R": {"wloc": (0, -0.07 * bat_fwd, 0.05 * bat_up)} if BIRD else {},
            "tail.1": {"rot": (0, 0, 28 * wag * AMP)}, "tail.2": {"rot": (0, 0, 18 * wag * AMP)}},
-        **wings(spread=20 * hop, lift=10 * hop))
+        **wings(spread=20 * hop + 12 * bat_up, lift=10 * hop))
 smooth(act)
 # 球的出現／消失用「瞬間」切換（不要慢慢長大）：縮放曲線改成常數插值
 for fc in act.fcurves:
