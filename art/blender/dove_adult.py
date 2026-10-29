@@ -55,10 +55,9 @@ for cu in list(bpy.data.curves):
     bpy.data.curves.remove(cu)
 bpy.context.scene["spirit_name"] = "Dove_Adult"
 bpy.context.scene["preview_palette"] = [FEATHER, WING, BAND]
-# 羽毛鱗紋（簡報 Q4 選 a，組長 2026-10-21）：一片一片圓圓的羽毛輪廓，只在背、翅膀、尾巴（身體後半部）；
-# 遊戲裡從階段 2 才顯示（BeastForms.PatternStrength）。scale 的 Y 小 → 羽片往後拉長
-bpy.context.scene["pattern"] = {"kind": "scallop", "size": 512, "scale": (8.0, 5.0, 8.0),
-                                "low": 0.7, "high": 1.0, "rim": 0.22, "randomness": 0.6, "region_y": (-0.12, 0.05)}
+# 羽毛鱗紋（簡報 Q4 選 a，組長 2026-10-21；10-29 組長：大片的紋路不好看 → 改成小小一排排的羽毛圓弧）
+# 只畫在翅膀與尾羽（副色）上，身體、臉、胸口乾淨；遊戲裡從階段 2 才顯示（BeastForms.PatternStrength）
+bpy.context.scene["pattern"] = {"kind": "scales", "size": 512, "spacing": 0.072, "rim": 0.14, "low": 0.78}
 bpy.context.scene["wool_tri_target"] = 2400        # 身體（metaball）減到多少面
 
 def put(o, name, scale, rot_deg, color, mask=None):
