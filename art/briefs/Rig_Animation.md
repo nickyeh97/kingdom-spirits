@@ -60,6 +60,30 @@ Blinking: not in this round (eyes are separate shapes joined into the body; a bl
 - **Q5 Order:** start with Lion Baby as the pipeline test (as proposed), or another beast?
 - **Q6 Who animates:** the assistant keys all clips in Blender by script (consistent, editable source as with the models), or the owner wants to learn by keying some clips in Blender's Pose Mode?
 
+## Owner answers (2026-10-29, faithful English summary)
+
+1. Clips: also add **Sleep** and **Play with a toy**.
+2. Wave hello: **every time** the game opens.
+3. Blinking: **not now**.
+4. Motion style: **Lion lively; Lamb and Dove gentle**.
+5. Start with the **Lion**.
+6. The assistant animates, but must **write it up as documentation in the art docs**; the owner will learn rigging in a separate session.
+7. Motions must **not be abnormally twisted**; they must respect **IK** (feet planted, joints bending the natural way).
+
+## Decisions taken from the answers (assistant, owner may adjust)
+
+- Clip set per skeleton: Idle, Happy, Wave, Eat, Sleep, Play (six). Evolve stays in code.
+- Legs use **IK** in Blender (an IK target bone per foot plus a pole bone per knee/elbow), so feet stay planted while the body moves and joints bend only forward/backward; clips are baked to the deform bones on export.
+- Validation for "no abnormal twisting": scripted checks on every clip — planted feet do not slide (< 1 cm) when they should be planted, no bone rotates more than its limit, knees/elbows never bend backwards — plus preview renders of key frames.
+- Unity plays clips with the **legacy `Animation` component** (FBX import type Legacy): no Animator Controller asset needed, clips play by name from code. Revisit only if blending needs grow.
+- Rigging is a separate step after `finalize_export.py`: `art/blender/rig_quadruped.py` opens the finalized `.blend`, adds the armature, weights and clips, saves a new version and exports the FBX with animation.
+- Production order: **Lion Baby → Idle + Happy → owner checks in Unity**, then the other four Lion Baby clips, then Lion Adult/Leader, then Lamb (gentle), then the bird skeleton for Dove (gentle).
+
+## Open items raised by the answers
+
+- **Sleep with open eyes:** blinking is "not now", but a sleeping beast with open eyes looks odd. Options: (a) closed-eye shapes swapped in only for Sleep (two small curved lines, no blink animation), (b) sleep facing away / head tucked so the eyes are hidden, (c) add blinking after all.
+- **The toy:** which toy? Proposal: a small ball (fixed colour, shared by all beasts), appears only during the Play clip.
+
 ## Status
 
-- **Awaiting owner confirmation.** No rig or animation has been built.
+- **Confirmed to start** (2026-10-29) for the Lion Baby skeleton with Idle + Happy. Sleep and Play wait for the two open items above.
