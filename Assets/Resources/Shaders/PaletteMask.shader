@@ -1,5 +1,6 @@
 // 靈獸卡通著色器（URP）：依頂點色遮罩 Mask 套用三個色槽，加卡通明暗與描邊（GDD §7.2、art/ART_PROFILE.md）
 //   A≈1：可換色，R／G／B → 主色／副色／點綴色槽，再乘上花紋貼圖（_Pattern，沒有花紋＝白色＝不變）
+//        花紋強度 _PatternStrength 依成長階段設定（BeastForms.PatternStrength：幼體網格在階段 1 不顯示花紋）
 //   A≈0：固定色，RGB 本身就是顏色（眼睛、鼻子、蹄、羊角、金飾）
 //   公式與 art/blender/finalize_export.py 的 Blender 預覽材質相同
 //   固定色不做色彩轉換：Blender 寫的是線性值（FLOAT_COLOR、匯出 colors_type='LINEAR'），
@@ -20,6 +21,7 @@ Shader "SpiritBeast/PaletteMask"
         _Secondary ("Secondary", Color) = (1, 0.95, 0.90, 1)
         _Accent ("Accent", Color) = (0.95, 0.55, 0.65, 1)
         _Pattern ("Pattern", 2D) = "white" {}
+        _PatternStrength ("Pattern Strength (by stage)", Range(0, 1)) = 1
         [ToggleUI] _UseMask ("Use Vertex Mask", Float) = 1
         _BaseColor ("Base Color (when mask is off)", Color) = (1, 1, 1, 1)
 
@@ -45,6 +47,7 @@ Shader "SpiritBeast/PaletteMask"
         float4 _Secondary;
         float4 _Accent;
         float4 _Pattern_ST;
+        float _PatternStrength;
         float4 _BaseColor;
         float4 _ShadowTint;
         float4 _OutlineColor;
@@ -138,7 +141,7 @@ Shader "SpiritBeast/PaletteMask"
                 if (_View > 1.5 && _View < 2.5) return half4(i.mask.aaa, 1);
 
                 float3 slot = (i.mask.r * _Primary.rgb + i.mask.g * _Secondary.rgb + i.mask.b * _Accent.rgb)
-                              * SAMPLE_TEXTURE2D(_Pattern, sampler_Pattern, i.uv).rgb;
+                              * lerp(1.0, SAMPLE_TEXTURE2D(_Pattern, sampler_Pattern, i.uv).rgb, _PatternStrength);
                 float3 albedo = lerp(i.mask.rgb, slot, saturate(i.mask.a));
                 albedo = lerp(_BaseColor.rgb, albedo, _UseMask);
                 if (_View > 2.5) return half4(albedo, 1);

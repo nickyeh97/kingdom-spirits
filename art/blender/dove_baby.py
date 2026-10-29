@@ -48,6 +48,10 @@ for cu in list(bpy.data.curves):
     bpy.data.curves.remove(cu)
 bpy.context.scene["spirit_name"] = "Dove_Baby"     # 給收尾腳本用的輸出名稱
 bpy.context.scene["preview_palette"] = [FEATHER, WING, BAND]   # finalize 預覽材質用的配色
+# 羽毛鱗紋（簡報 Q4 選 a，組長 2026-10-21）：一片一片圓圓的羽毛輪廓，只在背、翅膀、尾巴（身體後半部）；
+# 遊戲裡從階段 2 才顯示（BeastForms.PatternStrength）。scale 的 Y 小 → 羽片往後拉長
+bpy.context.scene["pattern"] = {"kind": "scallop", "size": 512, "scale": (8.0, 5.0, 8.0),
+                                "low": 0.7, "high": 1.0, "rim": 0.22, "randomness": 0.6, "region_y": (-0.08, 0.08)}
 
 def put(o, name, scale, rot_deg, color, mask=None):
     o.name = name

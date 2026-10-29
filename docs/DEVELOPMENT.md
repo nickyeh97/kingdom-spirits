@@ -121,7 +121,7 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
   `Lamb_Baby.fbx`（階段 1–2）、`Lamb_Adult.fbx`（階段 3）、`Lamb_Leader.fbx`（階段 4）。
   位置 `Assets/Art/Resources/Beasts/`；找不到模型的形態會用幾何體占位；目前 Lamb、Lion、Dove 各三顆都已就位
 - **花紋貼圖**（選用）：同資料夾放「模型名_Pattern.png」（例如 `Lion_Baby_Pattern.png`），會自動乘在色槽顏色上；
-  灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白
+  灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白；顯示強度依階段（`BeastForms.PatternStrength`：從階段 2 開始，小獅從初生）
 
 ## 美術檢查：配色預覽
 

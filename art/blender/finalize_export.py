@@ -250,6 +250,8 @@ for o in parts:
 
 # ---------- 4b) 花紋遮罩：用程序化雜訊「烘」成一張灰階貼圖（例如獅子的毛流紋理） ----------
 # 造型腳本設 scene["pattern"] = {"size": 512, "scale": (x, y, z), "low": 0.8, "high": 1.0}
+#   kind："noise"（預設，毛流）或 "scallop"（羽毛鱗紋；rim＝深色邊往內漸亮的寬度，randomness＝格子的不規則度）
+#   region_y：(y0, y1) 只在 Y 往後的部分出現（y0 以前沒有、y1 以後完整），例如鴿子只有背和翅膀有鱗紋
 #   scale：雜訊在 x、y、z 方向的密度。z 小 → 雜訊沿上下方向拉長 → 看起來像往下梳的毛
 #   low/high：最暗、最亮的倍率（1 = 不變暗）。引擎裡「色槽顏色 × 花紋」，固定色不受影響
 # 3D 雜訊不會重複，不會有「同一塊圖複製貼上」的感覺；貼圖只是把它記錄在 UV 上給引擎用。
@@ -261,19 +263,45 @@ if PATTERN:
     nt = tmp.node_tree; nt.nodes.clear()
     coord = nt.nodes.new("ShaderNodeTexCoord")
     mapping = nt.nodes.new("ShaderNodeMapping"); mapping.inputs["Scale"].default_value = tuple(PATTERN["scale"])
-    noise = nt.nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 1.0
-    noise.inputs["Detail"].default_value = float(PATTERN.get("detail", 4))
-    ramp = nt.nodes.new("ShaderNodeMapRange")                 # 雜訊 0.3–0.7 → low–high
-    ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 0.3, 0.7
+    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
+    ramp = nt.nodes.new("ShaderNodeMapRange")
     ramp.inputs["To Min"].default_value = float(PATTERN.get("low", 0.8))
     ramp.inputs["To Max"].default_value = float(PATTERN.get("high", 1.0))
+    if PATTERN.get("kind") == "scallop":
+        # 羽毛鱗紋（小鴿）：Voronoi 每一格的「邊緣」較深、往中間柔和地變亮 → 一片一片圓圓的羽片
+        # 試過：深色邊太窄＝硬線網子（像龜裂）；用到中心的距離＝一團一團的斑，看不出羽片。
+        # 寬而柔和的深色邊＋規則一點的格子（randomness 小）最像羽毛。
+        cells = nt.nodes.new("ShaderNodeTexVoronoi"); cells.feature = 'DISTANCE_TO_EDGE'
+        cells.inputs["Scale"].default_value = 1.0          # 節點本身預設 ×5，密度只由上面的 scale 決定
+        cells.inputs["Randomness"].default_value = float(PATTERN.get("randomness", 0.6))
+        nt.links.new(mapping.outputs["Vector"], cells.inputs["Vector"])
+        ramp.inputs["From Min"].default_value = 0.0
+        ramp.inputs["From Max"].default_value = float(PATTERN.get("rim", 0.22))   # 深色邊往內漸亮的寬度
+        nt.links.new(cells.outputs["Distance"], ramp.inputs["Value"])
+    else:
+        # 程序化雜訊（小獅的毛流）
+        noise = nt.nodes.new("ShaderNodeTexNoise")
+        noise.inputs["Scale"].default_value = 1.0
+        noise.inputs["Detail"].default_value = float(PATTERN.get("detail", 4))
+        ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 0.3, 0.7   # 雜訊 0.3–0.7 → low–high
+        nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
+        nt.links.new(noise.outputs["Fac"], ramp.inputs["Value"])
+    value = ramp.outputs["Result"]
+    if "region_y" in PATTERN:
+        # 只在身體後半部（Y 越往後越完整）：花紋＝1 − 區域 ×（1 − 花紋），臉和胸口維持乾淨
+        y0, y1 = PATTERN["region_y"]
+        sep = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(coord.outputs["Object"], sep.inputs["Vector"])
+        region = nt.nodes.new("ShaderNodeMapRange"); region.clamp = True
+        region.inputs["From Min"].default_value, region.inputs["From Max"].default_value = float(y0), float(y1)
+        nt.links.new(sep.outputs["Y"], region.inputs["Value"])
+        mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = 'FLOAT'
+        mix.inputs["A"].default_value = 1.0
+        nt.links.new(region.outputs["Result"], mix.inputs["Factor"])
+        nt.links.new(value, mix.inputs["B"])
+        value = mix.outputs["Result"]
     emit = nt.nodes.new("ShaderNodeEmission"); out = nt.nodes.new("ShaderNodeOutputMaterial")
     target = nt.nodes.new("ShaderNodeTexImage"); target.image = img; nt.nodes.active = target
-    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
-    nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
-    nt.links.new(noise.outputs["Fac"], ramp.inputs["Value"])
-    nt.links.new(ramp.outputs["Result"], emit.inputs["Color"])
+    nt.links.new(value, emit.inputs["Color"])
     nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
     body.data.materials.clear(); body.data.materials.append(tmp)
     scene = bpy.context.scene

@@ -39,6 +39,7 @@ namespace SpiritBeast.Runtime
                 go.transform.localPosition = Vector3.zero;
                 go.transform.localRotation = Quaternion.identity;
                 _modelMaterial = PaletteMaterial.Apply(go, Catalog.FindPalette(palette), PaletteMaterial.FindPattern(model.name));
+                if (_modelMaterial != null) _modelMaterial.SetFloat("_PatternStrength", BeastForms.PatternStrength(variant, stage));
                 _body.localScale = Vector3.one * BeastForms.Scale(stage);
             }
             else
