@@ -169,6 +169,19 @@ python3 Tools/fbx_mask_report.py Assets/Art/Models/*.fbx
 它會列出每個網格有哪些頂點色層、**Unity 實際讀的是哪一層**（只讀第一層），以及主色／副色／點綴／固定色的數量；
 「色槽全 0」＝換色後全黑，「多槽混合」＝多半是白色預設值而非 Mask。
 
+## 介面圖示
+
+六項服事、九顆聖靈果子的圖示在 `Assets/Resources/Icons/`（128×128、透明背景），用 Blender 腳本畫出來：
+
+```bash
+blender -b --python Tools/make_icons.py -- Assets/Resources/Icons
+```
+
+- 檔名對照在 `Assets/Core/Catalog.cs`：果子用 `Fruit.Icon`（英文），服事項目用 `ServiceIcon()` 依**關鍵字**比對
+  （平台改名也對得到；新增項目對不到時按鈕只顯示文字，要在 `ServiceIcon()` 補關鍵字並畫新圖示）
+- 匯入設定由 `Assets/Editor/IconImporter.cs` 自動設好（透明、mipmap、不壓縮）
+- 配色色票不是圖片，是程式依配色資料畫的（`UiKit.Swatch`）
+
 ## 中文字型
 
 WebGL 沒有系統字型，介面用的是 `Assets/Resources/Fonts/NotoSansTC-Subset.ttf`（程式用到的字＋Big5 常用 5401 字）。
