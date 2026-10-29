@@ -24,7 +24,7 @@ LOOPING = {"Idle", "Sleep"}
 FEET = [b for b in ("paw.L", "paw.R", "foot.L", "foot.R") if rig and b in rig.pose.bones]
 JOINTS = [(u, l) for u, l in (("upper_arm.L", "forearm.L"), ("upper_arm.R", "forearm.R"), ("thigh.L", "shin.L"), ("thigh.R", "shin.R"))
           if rig and u in rig.pose.bones]
-check("IK on every leg", rig is not None and all(any(c.type == 'IK' for c in rig.pose.bones[l].constraints) for _, l in JOINTS) and len(JOINTS) == 4,
+check("IK on every leg", rig is not None and all(any(c.type == 'IK' for c in rig.pose.bones[l].constraints) for _, l in JOINTS) and len(JOINTS) in (2, 4),
       f"{len(JOINTS)} legs")
 
 def bend(u, l):
@@ -33,10 +33,17 @@ def bend(u, l):
     d1 = (a.tail - a.head); d2 = (b.tail - b.head)
     return math.degrees(math.atan2(d1.y * d2.z - d1.z * d2.y, d1.y * d2.y + d1.z * d2.z))
 
+# 鳥：翅膀、尾羽本來就要張開（外框會變大），量大小時不算它們——只檢查身體有沒有被拉爆
+SKIP_GROUPS = {"wing.L", "wing.R", "wingtip.L", "wingtip.R", "tail.1"} if body and "wing.L" in body.vertex_groups else set()
+SKIP_V = set()
+if SKIP_GROUPS:
+    gi = {g.index for g in body.vertex_groups if g.name in SKIP_GROUPS}
+    SKIP_V = {v.index for v in body.data.vertices if any(g.group in gi and g.weight > 0.5 for g in v.groups)}
+
 def bbox():
     dg = bpy.context.evaluated_depsgraph_get()
     m = body.evaluated_get(dg).to_mesh()
-    pts = [body.matrix_world @ v.co for v in m.vertices]
+    pts = [body.matrix_world @ v.co for v in m.vertices if v.index not in SKIP_V]
     body.evaluated_get(dg).to_mesh_clear()
     return Vector([max(p[i] for p in pts) - min(p[i] for p in pts) for i in range(3)])
 
@@ -93,6 +100,8 @@ if rig and body:
                 if pb.name in ("root", "toy") or pb.name.endswith("_ik.L") or pb.name.endswith("_ik.R"):   # 根骨、IK 控制骨、會滾的球不算
                     continue
                 ang = math.degrees((pb.matrix_basis.to_quaternion()).angle)
+                if pb.name.startswith("wing"):        # 翅膀本來就要張開，上限放寬到 70°
+                    ang = ang * 45 / 70
                 if ang > worst_rot[0]:
                     worst_rot = (ang, f"{pb.name}@{f}")
                 pose.append(tuple(round(x, 4) for x in pb.matrix_basis.col[3][:3]) + tuple(round(x, 4) for x in pb.matrix_basis.to_quaternion()))
@@ -103,7 +112,7 @@ if rig and body:
                 first_pose = pose
         check(f"{act.name}: planted paws do not slide (< 1 cm)", worst_slide < 0.01, f"max slide {worst_slide * 100:.2f} cm")
         check(f"{act.name}: elbows/knees never bend backwards", not worst_bend_flip, ", ".join(worst_bend_flip[:6]) or "none")
-        check(f"{act.name}: no bone rotates more than 45°", worst_rot[0] < 45, f"max {worst_rot[0]:.1f}° ({worst_rot[1]})")
+        check(f"{act.name}: no bone rotates more than 45° (wings 70°)", worst_rot[0] < 45, f"max {worst_rot[0]:.1f}° ({worst_rot[1]})")
         check(f"{act.name}: mesh size stays within ±25%", worst_size < 0.25, f"max change {worst_size * 100:.1f}%")
         if act.name in LOOPING:
             check(f"{act.name}: loops seamlessly (first = last frame)", pose == first_pose, f"frames {f0}–{f1}")
