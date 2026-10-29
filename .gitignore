@@ -30,6 +30,8 @@ Tools/RuntimeCompileCheck/bin/
 Tools/RuntimeCompileCheck/obj/
 Tools/UguiReference/bin/
 Tools/UguiReference/obj/
+Tools/EditorCompileCheck/bin/
+Tools/EditorCompileCheck/obj/
 TestResults/
 results.xml
 artifacts/
