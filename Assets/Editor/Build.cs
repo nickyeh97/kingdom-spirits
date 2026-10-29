@@ -30,6 +30,8 @@ namespace SpiritBeast.Editor
             PlayerSettings.companyName = "TBOJ";
             PlayerSettings.productName = "Kingdom Spirits";
             PlayerSettings.WebGL.template = "PROJECT:SpiritBeast";
+            // 不顯示 Unity 啟動畫面：孩子點進來直接看到靈獸，也少打包 2.7 MB 的標誌貼圖（Unity 6 個人版可關）
+            PlayerSettings.SplashScreen.show = false;
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
             // 主機沒設好 Content-Encoding 時由載入器在瀏覽器解壓，仍可開啟（GDD §8.1）
             PlayerSettings.WebGL.decompressionFallback = true;

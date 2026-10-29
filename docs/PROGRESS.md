@@ -20,6 +20,9 @@
    6. Web 建置 ≤ 30 MB（2026-10-29 由 15 MB 放寬）＋手機實機檢查（載入秒數、描邊粗細、30 fps）——
       **第一次量測（2026-10-29，組長本機 Unity 6000.3.26f1）：下載 14.2 MB，在預算內**
       （wasm 7.1、data 6.9 MB；素材最大是 Unity 啟動畫面標誌 2.7 MB、URP 後製用的雜訊貼圖約 3 MB、中文字型 1.8 MB）。
+      2026-10-29 再瘦身：關 Unity 啟動畫面、URP Renderer 拿掉後製資料（待重新建置看大小）。
+      **手機實測發現 Demo 按鈕點了沒反應**：輸入系統設成新版 Input System（套件根本沒裝），IMGUI 收不到觸控 →
+      改回舊版 Input Manager（待組長重開 Unity、重新建置後用手機確認）。
       **待手機實機量測**（4G 載入秒數、描邊粗細、30 fps）
    7. 介面改 UGUI（取代 IMGUI）
 3. **G1 平台串接驗收**（往後放）：執行平台 migration、填 `supabase.json`、本機端到端測試（`docs/DEVELOPMENT.md`）

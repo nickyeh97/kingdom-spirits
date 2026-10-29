@@ -23,6 +23,10 @@
    （含 Renderer，關 HDR、關陰影）並設成預設管線；也可以手動按選單「**Spirit Beast/設定 URP（卡通著色器）**」。
    產生的 `Assets/Settings/*` 與 `ProjectSettings/GraphicsSettings.asset` 的變更**要 commit**。
    畫面全粉紅＝管線沒設好（著色器只在 URP 下運作），按一次上面的選單即可；命令列建置會自動先檢查。
+   URP 的 Renderer **不帶後製資料**（Post-processing 關閉）：沒用到後製，省下打包大小；之後若要加後製再打開。
+   **輸入系統用舊版 Input Manager**（Project Settings → Player → Active Input Handling＝Input Manager (Old)）：
+   介面是 IMGUI，手機的觸控要靠舊版 Input Manager 轉成滑鼠點擊；設成新版 Input System 時手機按鈕會全部沒反應
+   （2026-10-29 實機遇到）。改成 UGUI 時再一起評估是否換新版。
 4. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
 
 ## Supabase 設定（一次性）

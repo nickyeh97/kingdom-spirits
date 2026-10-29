@@ -18,7 +18,6 @@ namespace SpiritBeast.Editor
         const string Folder = "Assets/Settings";
         const string AssetPath = Folder + "/SpiritBeast_URP.asset";
         const string RendererPath = Folder + "/SpiritBeast_URP_Renderer.asset";
-        const string PostProcessDataPath = "Packages/com.unity.render-pipelines.universal/Runtime/Data/PostProcessData.asset";
 
         static RenderPipelineSetup() => EditorApplication.delayCall += () => Ensure();
 
@@ -37,8 +36,9 @@ namespace SpiritBeast.Editor
             if (asset == null)
             {
                 if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "Settings");
+                // 不給後製資料（postProcessData＝null）：卡通與 Blender 預覽都不用後製，
+                // 這樣 URP 的雜訊貼圖、後製著色器就不會被打包進 Web 建置（實測約 3 MB）
                 var renderer = ScriptableObject.CreateInstance<UniversalRendererData>();
-                renderer.postProcessData = AssetDatabase.LoadAssetAtPath<PostProcessData>(PostProcessDataPath);
                 AssetDatabase.CreateAsset(renderer, RendererPath);
 
                 asset = UniversalRenderPipelineAsset.Create(renderer);
