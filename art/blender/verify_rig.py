@@ -2,6 +2,7 @@
 # 用法：blender -b <檔案>.blend --python-exit-code 1 --python art/blender/verify_rig.py
 # 檢查「不要過於異常扭曲、要符合 IK」（組長 2026-10-29）：
 #   ⓪ 休息姿勢網格不變形（約束、權重設錯會先變形）
+#   ⓪b 專用骨（嘴、眼睛、閉眼、玩具）不會帶到旁邊的頂點（鼻子被嘴巴拉長就是這個）
 #   ① 腳掌貼地時不滑步：腳掌在地上（離地 < 2 公分）的影格之間，水平位置差 < 1 公分
 #   ② 關節不反折：肘、膝只往原本微彎的方向彎（跟休息姿勢的彎曲方向同號）
 #   ③ 骨頭旋轉不超過限制：每根骨頭相對休息姿勢的轉角 < 45°（root 除外）
@@ -47,6 +48,17 @@ if rig and body:
         pb.location = (0, 0, 0); pb.rotation_euler = (0, 0, 0)
     bpy.context.view_layer.update()
     rest_bend = {l: bend(u, l) for u, l in JOINTS}
+    # ⓪b 專用骨（嘴、眼睛、閉眼、玩具）只能「整塊」帶自己的零件：權重只能是 0 或 1，嘴巴骨不帶任何頂點
+    #     （v006 鼻子分到一半 mouth 權重，吃果子時被拉長——組長發現，這項之前沒檢查）
+    idx = {g.index: g.name for g in body.vertex_groups}
+    leaks = {}
+    for v in body.data.vertices:
+        for g in v.groups:
+            n = idx[g.group]
+            if n in ("eye.L", "eye.R", "lid.L", "lid.R", "toy", "mouth") and g.weight > 0.01 and (n == "mouth" or g.weight < 0.99):
+                leaks[n] = leaks.get(n, 0) + 1
+    check("Part bones (eyes, lids, mouth, toy) own only their own parts", not leaks,
+          ", ".join(f"{k}: {v} vertices" for k, v in leaks.items()) or "none")
     # ⓪ 休息姿勢（沒有動作、約束都開著）網格要跟沒綁骨架時一模一樣：
     #    約束或權重設錯時，還沒動網格就先變形（試做時腳掌整個翻過去，就是這項抓的）
     dg = bpy.context.evaluated_depsgraph_get()

@@ -31,19 +31,42 @@ JOINTS = {
         # 腿：肩／髖 → 肘／膝 → 腳掌 → 腳尖。前腳肘往後、後腳膝往前（這個微彎決定 IK 往哪邊彎）
         "front": [(0.15, -0.08, 0.34), (0.15, -0.055, 0.19), (0.15, -0.085, 0.05), (0.15, -0.15, 0.03)],
         "hind":  [(0.15, 0.20, 0.34), (0.15, 0.175, 0.19), (0.15, 0.205, 0.05), (0.15, 0.14, 0.03)],
-        "head_center": (0, -0.30, 0.72), "head_radii": (0.33, 0.31, 0.31),   # 頭的範圍（含鬃毛），整塊跟頭骨走
+        # 頭的範圍（含鬃毛、整個口鼻），整塊跟頭骨走；中心比頭往前一點，口鼻最前端（y −0.66）也在範圍裡
+        "head_center": (0, -0.36, 0.72), "head_radii": (0.33, 0.34, 0.31),
         "eye": (0.12, -0.545, 0.74), "eye_radii": (0.075, 0.05, 0.095),      # 眼睛（lion_baby.py 的 Eye；含反光點）
         "mouth": (0, -0.623, 0.612),                                          # 嘴巴物件的原點（張嘴繞這裡縮放）
         "toy": (0, -0.24, 0.07), "toy_radius": 0.07,                          # 玩具球：前腳前面的地上（頭的正下方）
         "style": "lively",
+        "k": 1.0, "ear_radius": 0.09, "toy_roll": 0.30,
+    },
+    # 成體：量測 Lion_Adult_v007 的網格（腿柱、背與肚子的高度、嘴的位置），臉沿用幼體 ×1.1（lion_adult.py 的 F()）
+    "Lion_Adult": {
+        "hips":  ((0, 0.40, 0.62), (0, 0.10, 0.62)),
+        "spine": ((0, 0.10, 0.62), (0, -0.25, 0.68)),
+        "neck":  ((0, -0.25, 0.68), (0, -0.45, 0.95)),
+        "head":  ((0, -0.45, 0.95), (0, -0.55, 1.45)),
+        "ear":   ((0.22, -0.47, 1.30), (0.27, -0.465, 1.44)),
+        "tail":  [(0, 0.47, 0.72), (0, 0.62, 0.62), (0, 0.68, 0.42), (0, 0.76, 0.28)],     # 往下垂的長尾巴
+        "front": [(0.17, -0.22, 0.56), (0.17, -0.20, 0.34), (0.17, -0.235, 0.08), (0.17, -0.31, 0.04)],
+        "hind":  [(0.17, 0.36, 0.56), (0.17, 0.31, 0.37), (0.17, 0.40, 0.10), (0.17, 0.33, 0.04)],
+        # 頭的範圍：頭＋口鼻；鬃毛是另一塊（metaball），整塊「中心」在範圍裡的零件都跟頭走（見權重 ③b）
+        "head_center": (0, -0.62, 1.12), "head_radii": (0.40, 0.36, 0.40),
+        "eye": (0.132, -0.79, 1.122), "eye_radii": (0.083, 0.055, 0.105),
+        "toy": (0, -0.52, 0.08), "toy_radius": 0.08,
+        "style": "lively",
+        "k": 1.6, "ear_radius": 0.10, "toy_roll": 0.45,           # 肩高 0.56 ÷ 幼體 0.34 ≈ 1.6
     },
 }
+JOINTS["Lion_Leader"] = JOINTS["Lion_Adult"]        # 小領袖＝成體＋皇冠、項鍊、更大的鬃毛：骨架一樣
 J = JOINTS.get(NAME)
 if J is None:
     raise SystemExit(f"rig_quadruped.py 還沒有 {NAME} 的關節位置，請在 JOINTS 加一筆")
 
 body = bpy.data.objects[NAME]
 mouth = bpy.data.objects.get("Mouth")
+if mouth and "mouth" not in J:
+    J["mouth"] = tuple(mouth.matrix_world.translation)   # 嘴巴骨放在嘴巴物件的原點（張嘴繞這裡縮放）
+K = J.get("k", 1.0)                                     # 體型倍率：移動距離（跳、揮手、趴下）跟著體型放大
 
 # ---------- 1b) 額外零件：閉眼弧線、玩具球 ----------
 # 都併進身體網格（同一個材質，符合美術設定檔），各自掛一根骨頭；
@@ -74,7 +97,7 @@ def finish_part(o, mask, group, center):
 
 def tube(name, pts, radius):
     cu = bpy.data.curves.new(name, 'CURVE'); cu.dimensions = '3D'
-    cu.bevel_depth = radius; cu.bevel_resolution = 2; cu.use_fill_caps = True
+    cu.bevel_depth = radius; cu.bevel_resolution = 0; cu.use_fill_caps = True   # 細線：方形截面就夠（省三角形）
     sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
     for i, p in enumerate(pts):
         sp.points[i].co = (p.x, p.y, p.z, 1)
@@ -90,14 +113,15 @@ ex, ey, ez = J["eye"]
 for side, sx in (("L", 1), ("R", -1)):
     # 閉眼：一道往下彎的弧線「︶」，貼在眼睛的位置（眼睛縮小後露出頭的表面，弧線就在上面）
     pts = []
-    for i in range(9):
-        u = -1 + 2 * i / 8
+    for i in range(7):
+        u = -1 + 2 * i / 6
         pts.append(Vector((sx * ex + 0.045 * u, ey - 0.012 - 0.01 * (1 - u * u), ez - 0.018 * (1 - u * u))))
     extras.append(finish_part(tube(f"Lid.{side}", pts, 0.008), INK, f"lid.{side}", (sx * ex, ey, ez)))
-bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=8, radius=J["toy_radius"], location=J["toy"])
+# 零件都很小，用低面數（成體、小領袖本身已接近 8000 三角形預算）
+bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=5, radius=J["toy_radius"], location=J["toy"])
 ball = bpy.context.active_object; ball.name = "Toy"
 extras.append(finish_part(ball, BALL, "toy", J["toy"]))
-bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=J["toy_radius"] * 1.03, depth=J["toy_radius"] * 0.5,
+bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=J["toy_radius"] * 1.03, depth=J["toy_radius"] * 0.5,
                                     location=J["toy"], rotation=(0, math.radians(90), 0))
 band = bpy.context.active_object; band.name = "ToyBand"
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
@@ -214,6 +238,12 @@ def dist_to_segment(p, a, b):
     return np.linalg.norm(p - (a + t[:, None] * ab), axis=1)
 
 D = np.stack([dist_to_segment(co, a, b) for a, b in seg], axis=1)          # 頂點 × 骨頭的距離
+# 「專用骨」（眼睛、閉眼、嘴、玩具）不參加距離權重：它們只帶自己指定的零件。
+# v006 沒排除，鼻子離 mouth 骨很近，分到一半權重 → 吃果子張嘴時鼻子被拉長（組長 2026-10-29 發現）
+PART_BONES = {"mouth", "toy", "eye.L", "eye.R", "lid.L", "lid.R"}
+for i, b in enumerate(deform):
+    if b.name in PART_BONES:
+        D[:, i] = np.inf
 W = np.zeros_like(D)
 near = np.argsort(D, axis=1)[:, :2]
 for k in range(2):
@@ -221,19 +251,7 @@ for k in range(2):
     W[np.arange(len(co)), idx] = 1.0 / (D[np.arange(len(co)), idx] + 0.01) ** 4
 W /= W.sum(axis=1, keepdims=True)
 
-names = [b.name for b in deform]
-hc, hr = np.array(J["head_center"]), np.array(J["head_radii"])
-r = np.linalg.norm((co - hc) / hr, axis=1)
-w_head = np.clip((1.1 - r) / 0.2, 0, 1)                                     # 頭裡面＝1，邊緣 0.2 的範圍平滑過渡
-head_w = np.zeros(len(names)); head_w[names.index("head")] = 1
-for side, f in (("L", lambda p: p), ("R", mirror)):
-    ear_c = np.array(f(J["ear"][0])) + 0.5 * (np.array(f(J["ear"][1])) - np.array(f(J["ear"][0])))
-    on_ear = np.linalg.norm(co - ear_c, axis=1) < 0.09
-    W[on_ear] = 0; W[on_ear, names.index(f"ear.{side}")] = 1
-    w_head[on_ear] = 0
-W = W * (1 - w_head[:, None]) + head_w[None, :] * w_head[:, None]
-
-# ③ 小零件整塊同一組權重（連在一起的頂點算一塊）
+# 連通塊：連在一起的頂點算一塊（③、③b 用）
 parent = list(range(len(co)))
 def find(i):
     while parent[i] != i:
@@ -243,6 +261,29 @@ for e in me.edges:
     a, b = find(e.vertices[0]), find(e.vertices[1])
     if a != b: parent[a] = b
 roots = np.array([find(i) for i in range(len(co))])
+names = [b.name for b in deform]
+hc, hr = np.array(J["head_center"]), np.array(J["head_radii"])
+r = np.linalg.norm((co - hc) / hr, axis=1)
+w_head = np.clip((1.1 - r) / 0.2, 0, 1)                                     # 頭裡面＝1，邊緣 0.2 的範圍平滑過渡
+head_w = np.zeros(len(names)); head_w[names.index("head")] = 1
+# ③b 整塊零件的「中心」在頭範圍裡 → 整塊都跟頭走（成體的鬃毛圈、小領袖的皇冠）；
+#    身體、項鍊這種中心在外面的不受影響（鬃毛垂到胸口，逐點判斷會被撕成兩半）
+for rt in np.unique(roots):
+    m = roots == rt
+    if m[N_BODY:].any():
+        continue
+    c = co[m].mean(axis=0)
+    if np.linalg.norm((c - hc) / hr) < 1.0:
+        w_head[m] = np.maximum(w_head[m], 1.0)
+# 耳朵附近 → 耳朵骨（放在 ③b 後面：耳朵也是「中心在頭裡」的小塊，不然會被改回頭骨）
+for side, f in (("L", lambda p: p), ("R", mirror)):
+    ear_c = np.array(f(J["ear"][0])) + 0.5 * (np.array(f(J["ear"][1])) - np.array(f(J["ear"][0])))
+    on_ear = np.linalg.norm(co - ear_c, axis=1) < J.get("ear_radius", 0.09)
+    W[on_ear] = 0; W[on_ear, names.index(f"ear.{side}")] = 1
+    w_head[on_ear] = 0
+W = W * (1 - w_head[:, None]) + head_w[None, :] * w_head[:, None]
+
+# ③ 小零件整塊同一組權重（連在一起的頂點算一塊）
 for rt in np.unique(roots):
     m = roots == rt
     if m.sum() < 250 and not m[N_BODY:].any():
@@ -307,7 +348,9 @@ def key(frame, **poses):
     for bname, p in poses.items():
         pb = rig.pose.bones[bname]
         if "wloc" in p:
-            p = dict(p, loc=tuple(rig.data.bones[bname].matrix_local.to_3x3().inverted() @ Vector(p["wloc"])))
+            # 體型倍率 K：同一個動作在大隻的身上移動距離跟著放大（球的滾動距離各模型自己設定，不再乘）
+            d = Vector(p["wloc"]) * (1.0 if bname == "toy" else K)
+            p = dict(p, loc=tuple(rig.data.bones[bname].matrix_local.to_3x3().inverted() @ d))
         if "loc" in p:
             pb.location = p["loc"]; pb.keyframe_insert("location", frame=frame)
         if "rot" in p:
@@ -410,7 +453,7 @@ smooth(act, cyclic=True)
 act = action("Play", 60)
 rest_all()
 R = J["toy_radius"]
-roll = 0.30                                      # 撥一下，球往前滾 30 公分（滾出頭的下面，看得到）
+roll = J.get("toy_roll", 0.30)                   # 撥一下，球往前滾（滾出頭的下面，看得到）
 # 撥球的腳：先垂直抬起（17 格）→ 往前撥（20 格）→ 在空中收回來（23 格）→ 垂直放下（26 格）；
 # 離地、落地都是直上直下，腳掌不會在地上拖著滑
 for f, show, bow, bat_fwd, bat_up, rolled, hop, wag in (

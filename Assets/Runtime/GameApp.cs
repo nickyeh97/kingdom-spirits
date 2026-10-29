@@ -184,9 +184,9 @@ namespace SpiritBeast.Runtime
         }
 
         // ---- 靈獸自己的小動作（只在靈獸之家）----
-        // 一陣子沒碰：玩一下球；再久一點：睡著（點一下就醒來，播 Happy）。
+        // 6 秒沒碰：玩一下球；15 秒：睡著（點一下就醒來，播 Happy）。
         // 只是讓靈獸看起來有生命，不提醒、不催促（守則紅燈 #2：沒有任何「回來看我」的機制）。
-        const float PlayAfter = 15f, SleepAfter = 40f;
+        const float PlayAfter = 6f, SleepAfter = 15f;   // 組長 2026-10-29
         bool _waved, _playedToy;
         float _lastTouch;
 
