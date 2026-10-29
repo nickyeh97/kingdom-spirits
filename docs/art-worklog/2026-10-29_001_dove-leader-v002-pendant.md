@@ -38,4 +38,4 @@ Faithful English summary (2026-10-29): "Recording mode works. Add an accessory o
 
 ## User feedback
 
-- Pending; this does not mean accepted.
+- 2026-10-29 (faithful English summary): "Pulled; the Dove Leader is fine." Checked by the owner in Unity. Accepted.
