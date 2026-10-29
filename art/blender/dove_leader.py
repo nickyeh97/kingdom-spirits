@@ -1,4 +1,4 @@
-# 小鴿（小領袖，階段 4）完整腳本 —— v001
+# 小鴿（小領袖，階段 4）完整腳本 —— v002
 # 用法（命令列，在 repo 根目錄）：
 #   blender -b --python art/blender/dove_leader.py --python art/blender/finalize_export.py -- art/models/Dove --unreal
 # 用法（Blender 介面）：Scripting → Open 這個檔案（不要用貼上的：它要找同一個資料夾裡的 dove_adult.py）→ ▶
@@ -6,8 +6,10 @@
 # 做法：跟小獅小領袖一樣，先「整支執行」成體腳本 dove_adult.py 蓋出成體，再加上小領袖的東西。
 # 小領袖（簡報 Q5，組長 2026-10-21 確認）：頭上戴橄欖葉冠（創世記 8:11，和平）；共用的光環另做，不在這裡。
 # 另外尾巴多兩根長尾羽（簡報：小領袖的尾巴更長）。
+# v002（組長 2026-10-29）：胸前加一件配件——金項鍊＋圓墜子，墜子正面一枝小橄欖（跟葉冠呼應；小獅是紅寶石）。
 import bpy, os, math
 from mathutils import Vector, Matrix
+from mathutils.bvhtree import BVHTree
 
 # ---------- 1) 先蓋出成體 ----------
 try:
@@ -20,7 +22,7 @@ exec(compile(open(ADULT, encoding="utf-8").read(), ADULT, "exec"))
 
 scene = bpy.context.scene
 scene["spirit_name"] = "Dove_Leader"
-scene["wool_tri_target"] = 1600                     # 身體 metaball 減面減多一點，把預算讓給葉冠和長尾羽（身體很圓滑，看不太出差別）
+scene["wool_tri_target"] = 1400                     # 身體 metaball 減面減多一點，把預算讓給葉冠、長尾羽、項鍊（身體很圓滑，看不太出差別）
 
 GOLD_C  = (0.95, 0.76, 0.30, 1)
 OLIVE_C = (0.42, 0.55, 0.28, 1)
@@ -108,4 +110,61 @@ for yaw in (-7, 7):
     sphere("TailFeather", base + along(rot, (0, 0.30, 0)), (0.046, 0.33, 0.017), rot, WING, seg=10, rings=6, mask=MASK_SECONDARY)
     sphere("TailTip", base + along(rot, (0, 0.58, 0)), (0.048, 0.08, 0.020), rot, BAND, seg=10, rings=6, mask=MASK_ACCENT)
 
-print("小鴿小領袖 v001 完成")
+# ---------- 4) 胸前配件：金項鍊＋圓墜子（正面一枝小橄欖） ----------
+# 鍊子是一個斜放的圓圈：後面高（脖子後面、頭的下緣）、前面低（胸口）。
+# 圓圈上每一點從外面往圓心打射線，打到身體表面就是鍊子的位置（小獅項鍊同一招）。
+# 身體是 metaball，不能直接打射線 → 先用它「算出來的網格」建一個射線用的 BVH 樹。
+dg = bpy.context.evaluated_depsgraph_get()
+torso_eval = torso.evaluated_get(dg)
+torso_mesh = torso_eval.to_mesh()
+bvh = BVHTree.FromPolygons([torso.matrix_world @ v.co for v in torso_mesh.vertices],
+                           [tuple(p.vertices) for p in torso_mesh.polygons])
+torso_eval.to_mesh_clear()
+
+FRONT, BACK = Vector((0, -0.44, 0.70)), Vector((0, -0.18, 0.95))
+C = (FRONT + BACK) / 2
+hn = (FRONT - C).normalized()                       # 圓圈平面上「往前下」的方向
+side = Vector((1, 0, 0))
+chain, normals = [], []
+N = 20
+for i in range(N + 1):
+    a = 2 * math.pi * i / N                         # a = 0 在正前方（墜子的位置）
+    radial = (hn * math.cos(a) + side * math.sin(a)).normalized()
+    hit, nor, _, _ = bvh.ray_cast(C + radial * 1.0, -radial)
+    if hit is None:
+        continue
+    chain.append(hit + nor * 0.012)
+    normals.append(nor)
+chain[-1] = chain[0]                                # 頭尾接起來成一圈
+curve("Necklace", chain, 0.011, GOLD_C, MASK_GOLD)
+
+# 墜子：金色圓牌，掛在鍊子最低點下面，面朝外；中間一枝小橄欖（綠葉＋金色枝）
+p0, n0 = chain[0], normals[0]
+pend_c = p0 + Vector((0, 0, -0.075)) + n0 * 0.012
+face = Vector((0, 0, 1)).rotation_difference(n0)    # 讓物件的 +Z 朝外（圓牌的正面）
+bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.068, depth=0.018, location=pend_c)
+pend = put(bpy.context.active_object, "Pendant", (1, 1, 1), (0, 0, 0), GOLD_C, mask=MASK_GOLD)
+pend.rotation_mode = 'QUATERNION'; pend.rotation_quaternion = face
+# 掛環：連接鍊子和圓牌
+sphere("Pendant", (p0 + pend_c) / 2 + n0 * 0.006, (0.014, 0.014, 0.024), color=GOLD_C, seg=8, rings=4, mask=MASK_GOLD)
+
+# 橄欖枝：圓牌正面一條斜斜的金色細枝，兩側各一片、頂端一片橄欖葉（固定橄欖綠），從正面看得出是一枝葉子
+up = Vector((0, 0, 1)) - n0 * n0.z                  # 圓牌面上的「上」
+up.normalize()
+right = up.cross(n0).normalized()
+front = pend_c + n0 * 0.012                         # 圓牌正面
+stem_dir = (up * math.cos(math.radians(25)) + right * math.sin(math.radians(25))).normalized()
+stem = [front - stem_dir * 0.045, front + stem_dir * 0.040]
+curve("OliveStem", stem, 0.005, GOLD_C, MASK_GOLD)
+def emblem_leaf(at, direction):
+    side_ = n0.cross(direction).normalized()
+    rot = Matrix((side_, direction, n0)).transposed().to_quaternion()
+    o = sphere("OliveLeaf", at + direction * 0.018 + n0 * 0.004, (0.010, 0.022, 0.005), color=OLIVE_C, seg=6, rings=3, mask=MASK_OLIVE)
+    o.rotation_mode = 'QUATERNION'; o.rotation_quaternion = rot
+for t, sign in ((-0.015, 1), (0.005, -1), (0.022, 1)):
+    base = front + stem_dir * t
+    leaf_dir = (stem_dir * 0.6 + right * 0.8 * sign).normalized()
+    emblem_leaf(base, leaf_dir)
+emblem_leaf(front + stem_dir * 0.035, stem_dir)    # 頂端那片
+
+print("小鴿小領袖 v002 完成")

@@ -81,7 +81,7 @@ GDD §7.2 plans one humanoid and one quadruped skeleton shared across species. A
 
 ## Basis for starting production
 
-- Status: **confirmed to start** (2026-10-21). Built as Dove_Baby v001. Owner confirmed the adjusted colour slots (2026-10-21: "色槽可以") and asked for the Adult; built as Dove_Adult v001 (worklog 2026-10-21_002). Leader requested the same day; built as Dove_Leader v001 (worklog 2026-10-21_003).
+- Status: **confirmed to start** (2026-10-21). Built as Dove_Baby v001. Owner confirmed the adjusted colour slots (2026-10-21: "色槽可以") and asked for the Adult; built as Dove_Adult v001 (worklog 2026-10-21_002). Leader requested the same day; built as Dove_Leader v001 (worklog 2026-10-21_003). 2026-10-29 owner: add a chest accessory → Dove_Leader v002, gold necklace with an olive-branch pendant (worklog 2026-10-29_001).
 - Q6 is recorded as a design note only: the Dove stays a plain, gentle companion; no extra glow beyond the shared stage-4 halo.
 - Colour-slot adjustment found while building (assistant, flagged to the owner): in all 8 palettes the secondary colour is *darker* than the primary (e.g. 雲朵 #E9EEF2 / #A9B6C2 / #3C4A57). A secondary chest would therefore read darker than the body, which is not dove-like. v001 uses primary = head, body, chest; secondary = wings and tail; accent = wing-tip and tail-tip bands (dark, like a rock dove's bands); blush fixed pink instead of accent (a dark accent blush would look like a bruise). Fixed coral beak and feet as confirmed.
 - Stage-2 scalloped pattern (Q4 a): needs a stage switch in the shader (the baby mesh is shared by stages 1–2, and the pattern must appear only from stage 2). Not in v001; follow-up.
