@@ -175,13 +175,26 @@ def piano():
         rect("Black", -0.65 + i * 0.26, 0.17, 0.15, 0.55, "#2E2620", 0.02, r=0.03)
 
 def instrument():
-    # 小樂器：鈴鼓（圓框＋鼓面＋四對小鈸片）
-    circle("Rim", 0, 0, 0.95, "#C98A3E", 0)
-    circle("Head", 0, 0, 0.72, "#FBEFD5", 0.01)
-    for k in range(4):
-        a = math.radians(45 + 90 * k)
-        ellipse("Jingle", 0.84 * math.cos(a), 0.84 * math.sin(a), 0.2, 0.13, "#D9DEE3", 0.02, math.degrees(a) + 90)
-    heart("Heart", 0, 0, 0.3, "#F497A9", 0.03)
+    # 小樂器：一對沙鈴（第一版畫鈴鼓＋中間愛心，組長看不出是什麼 → 改成孩子一看就懂的沙鈴）
+    # 兩支並排、各往外斜一點：頭在上、握把在下；先在「沙鈴自己的座標」畫，再繞握把底端轉過去
+    for (cx, tilt, body) in ((-0.36, 12, "#F5963C"), (0.36, -12, "#5BB5D6")):
+        a = math.radians(tilt)
+        pivot = (cx, -1.0)
+        def P(x, y):                                     # 沙鈴自己的座標 → 圖上的座標
+            dx, dy = x, y + 1.0
+            return (pivot[0] + dx * math.cos(a) - dy * math.sin(a), pivot[1] + dx * math.sin(a) + dy * math.cos(a))
+        stroke("Handle", [P(0, -0.9), P(0, -0.2)], 0.15, "#8E5E36", 0)
+        hx, hy = P(0, 0.22)
+        ellipse("Head", hx, hy, 0.32, 0.46, body, 0.01, tilt)
+        bx, by = P(0, 0.2)
+        ellipse("Band", bx, by, 0.33, 0.08, "#FFE08A", 0.02, tilt)
+        for (x, y) in ((-0.13, 0.44), (0.12, 0.0)):
+            dx, dy = P(x, y)
+            circle("Dot", dx, dy, 0.055, "#FFFFFF", 0.02)
+    for (x, y, r) in ((0.0, 0.9, 90), (-0.2, 0.82, 120), (0.2, 0.82, 60)):     # 搖動的小線條
+        a = math.radians(r)
+        stroke("Shake", [(x - 0.1 * math.cos(a), y - 0.1 * math.sin(a)), (x + 0.1 * math.cos(a), y + 0.1 * math.sin(a))],
+               0.06, "#3D2B1F", 0.03)
 
 def vocal():
     # Vocal：麥克風＋音符
