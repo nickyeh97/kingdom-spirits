@@ -32,7 +32,11 @@ namespace SpiritBeast.Runtime
             // 鏡頭固定、框得下最大的小領袖：進化時看得出「長大」
             // 小領袖約 1.63 公尺：頭頂不碰上方按鈕、腳不碰下方色票
             _camera.transform.position = new Vector3(0f, 1.0f, -3.2f);
-            _camera.transform.LookAt(new Vector3(0f, 0.95f, 0f));
+            _camera.transform.LookAt(LookAt);
+            // 上下滑動的基準：目前的仰角與距離（之後以這個角度為中心，上下各 30°）
+            var offset = _camera.transform.position - LookAt;
+            _basePitch = Mathf.Asin(offset.y / offset.magnitude) * Mathf.Rad2Deg;
+            _distance = offset.magnitude;
             RenderStyle.Init(_camera);
 
             _beast = new GameObject("Beast").AddComponent<BeastView>();
@@ -63,6 +67,23 @@ namespace SpiritBeast.Runtime
             _message = _encourager.AfterLog(outcome, _variant, null);
             if (outcome.Evolved) _beast.Evolve(_variant, _palette, outcome.StageAfter);
             else _beast.Celebrate();
+        }
+
+        // ---- 滑動轉動 ----
+
+        static readonly Vector3 LookAt = new Vector3(0f, 0.95f, 0f);
+        const float PitchRange = 30f;
+        float _basePitch, _pitch, _distance;
+
+        /// <summary>delta：手指位移（像素）。滑過整個螢幕寬＝轉一圈；上下滑過螢幕高的一半＝30°</summary>
+        void Orbit(Vector2 delta)
+        {
+            if (_beast.Evolving) return;
+            _beast.Yaw -= delta.x / Screen.width * 360f;
+            _pitch = Mathf.Clamp(_pitch - delta.y / Screen.height * 120f, -PitchRange, PitchRange);
+            float a = (_basePitch + _pitch) * Mathf.Deg2Rad;
+            _camera.transform.position = LookAt + new Vector3(0f, Mathf.Sin(a), -Mathf.Cos(a)) * _distance;
+            _camera.transform.LookAt(LookAt);
         }
 
         // ---- 畫面（UGUI）：以 400 寬的邏輯座標排版（UiKit）----
@@ -106,7 +127,8 @@ namespace SpiritBeast.Runtime
             UiKit.Label(p, "服事 " + _card.Total + " 次　·　小領袖靈獸 Demo", 14, 0, 30, 400, 22);
             UiKit.Button(p, "渲染：" + RenderStyle.Label, 296, 4, 100, 26, () => { RenderStyle.Toggle(); Render(); }, size: 12);
             // 點靈獸：跳一下（放在選單按鈕下面，避免擋到按鈕）
-            UiKit.Hotspot(p, 0, 96, 400, top - 150, () => _beast.Hop());
+            // 點一下＝跳；左右滑＝轉靈獸（看每個角度）；上下滑＝鏡頭繞著靈獸上下轉（上下各 30°）
+            UiKit.Swipe(p, 0, 96, 400, top - 150, () => _beast.Hop(), Orbit);
 
             var variants = Catalog.AvailableVariants.ToList();
             for (int i = 0; i < variants.Count; i++)

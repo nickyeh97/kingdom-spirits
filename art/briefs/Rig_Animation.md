@@ -84,6 +84,13 @@ Blinking: not in this round (eyes are separate shapes joined into the body; a bl
 - **Sleep with open eyes:** blinking is "not now", but a sleeping beast with open eyes looks odd. Options: (a) closed-eye shapes swapped in only for Sleep (two small curved lines, no blink animation), (b) sleep facing away / head tucked so the eyes are hidden, (c) add blinking after all.
 - **The toy:** which toy? Proposal: a small ball (fixed colour, shared by all beasts), appears only during the Play clip.
 
+## Owner decisions on the open items (2026-10-29, faithful English summary)
+
+- Sleep eyes: "(a) first, then (c)" — now: closed-eye arcs shown only during Sleep; later: add blinking.
+- Toy: a small ball.
+
+Implementation (assistant): an `eye.L/R` bone carries the open eyes and a `lid.L/R` bone carries closed-eye arcs that are collapsed to a point at rest; Sleep scales the eye bones down and the lid bones up. The ball is part of the mesh on a `toy` bone, collapsed at rest and expanded only in Play. Both stay inside the single mesh and material (profile budget) and need no extra Unity setup.
+
 ## Status
 
-- **Confirmed to start** (2026-10-29) for the Lion Baby skeleton with Idle + Happy. Sleep and Play wait for the two open items above.
+- **Confirmed to start** (2026-10-29) for the Lion Baby skeleton with Idle + Happy; Sleep and Play unblocked the same day (decisions above).

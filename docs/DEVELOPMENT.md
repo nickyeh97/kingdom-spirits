@@ -125,6 +125,9 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - **花紋貼圖**（選用）：同資料夾放「模型名_Pattern.png」（例如 `Lion_Baby_Pattern.png`），會自動乘在色槽顏色上；
   灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白；顯示強度依階段（`BeastForms.PatternStrength`：從階段 2 開始，小獅從初生）
 
+- **Demo 操作**：點靈獸＝跳一下；**左右滑動**＝水平轉動靈獸（看每個角度，換靈獸／配色時保留角度）；
+  **上下滑動**＝鏡頭繞著靈獸上下轉，以開場角度為中心上下各 30°（`DemoApp.Orbit`，滑鼠拖曳也可以）
+
 ## 美術檢查：配色預覽
 
 匯入靈獸 FBX 後，在 Project 視窗選取它 → 選單「**Spirit Beast/配色預覽（選取的模型）**」，

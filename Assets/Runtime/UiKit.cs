@@ -164,6 +164,16 @@ namespace SpiritBeast.Runtime
             return button;
         }
 
+        /// <summary>透明的觸控區：點一下＝onTap，滑動＝onDrag(位移像素)</summary>
+        public static SwipeArea Swipe(Transform parent, float x, float y, float w, float h, Action onTap, Action<Vector2> onDrag)
+        {
+            var img = Place(NewImage(parent, "SwipeArea", new Color(1f, 1f, 1f, 0f), false), x, y, w, h);
+            var area = img.gameObject.AddComponent<SwipeArea>();
+            area.OnTap = onTap;
+            area.OnDragDelta = onDrag;
+            return area;
+        }
+
         /// <summary>對話框：深色圓角底＋白字</summary>
         public static void Bubble(Transform parent, string text, float x, float y, float w, float h, int size = 17)
         {

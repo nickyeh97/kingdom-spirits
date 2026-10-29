@@ -21,6 +21,9 @@ namespace SpiritBeast.Runtime
 
         public bool Evolving => _evolveTime >= 0f;
 
+        /// <summary>使用者轉動的角度（度，水平方向）：Demo 左右滑動時改它，換靈獸、換配色都保留</summary>
+        public float Yaw;
+
         Material _modelMaterial;
         // 有骨架動作的模型（FBX 以 Legacy 動畫匯入）：用名稱播放；沒有動作的模型用下面的程式動作（跳、轉圈）
         Animation _anim;
@@ -131,7 +134,7 @@ namespace SpiritBeast.Runtime
                 if (_evolveTime > 3f) { _evolveTime = -1f; transform.localScale = Vector3.one; }
             }
             _body.localPosition = new Vector3(0f, y, 0f);
-            _body.localRotation = Quaternion.Euler(0f, 200f + spin, 0f);
+            _body.localRotation = Quaternion.Euler(0f, 200f + Yaw + spin, 0f);
         }
 
         // ---- 造型 ----
