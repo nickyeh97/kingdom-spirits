@@ -59,7 +59,7 @@ Every child has their own spirit beast that grows with the child's real service:
 
 ### Hard constraints (mobile Web)
 
-- Web build **≤ 15 MB** compressed; first load on 4G ≤ 10 s.
+- Web build **≤ 30 MB** compressed (leader decision 2026-10-29; was 15 MB); first load on 4G ≤ 10 s.
 - Only one beast in the scene; adult ≤ 8k triangles, textures ≤ 1024², single material.
 - Portrait, one-handed, buttons ≥ 44 pt; **no text input anywhere in the game**.
 

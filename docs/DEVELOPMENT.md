@@ -63,12 +63,17 @@ dotnet build Tools/RuntimeCompileCheck
 
 ## 建置 Web
 
+編輯器裡：選單「**Spirit Beast/建置 Web（含大小報告）**」（第一次會切換到 Web 平台，要等一下）。命令列：
+
 ```bash
 "$UNITY" -batchmode -nographics -quit -projectPath . \
   -executeMethod SpiritBeast.Editor.Build.Web -logFile -
 ```
 
 - 輸出在 `Builds/Web/`（不進版控）。建置腳本：`Assets/Editor/Build.cs`。
+- **大小檢查**：建完寫出 `Builds/Web-size-report.txt`（不進版控、不會被部署），列出
+  ①實際要下載的檔案（Brotli 壓縮後，和預算比的是這個）②打包的素材前 40 大（壓縮前，用來找誰最大）。
+  預算是壓縮後 **30 MB**（GDD §7.3）；超過時命令列以錯誤碼結束、編輯器跳出提示。
 - 網頁模板：`Assets/WebGLTemplates/SpiritBeast/index.html`。它負責讀取平台帶來的授權片段（`#at=…&child=…`）、
   立刻清掉網址列，再交給 C#（`Assets/Plugins/WebGL/AuthFragment.jslib`）。
 - 壓縮用 Brotli ＋「解壓縮後備」：主機沒設好 `Content-Encoding` 也能開，只是比較慢。

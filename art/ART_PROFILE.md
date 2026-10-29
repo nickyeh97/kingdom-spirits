@@ -19,7 +19,7 @@ This profile holds project-wide decisions for every 3D model in this repository.
 
 - Three meshes per species: Baby (stages 1–2), Adult (stage 3), Leader (stage 4). One beast on screen at a time.
 - **At most 8,000 evaluated triangles per mesh** (counting triangles, not faces). Single material. Textures at most 1024²; pattern mask at most 512².
-- Web build at most 15 MB compressed in total.
+- Web build at most 30 MB compressed in total (leader decision 2026-10-29; was 15 MB).
 - Origin at the feet centre (Z = 0), facing −Y in Blender (Unity forward after export), 1 unit = 1 metre.
 - Mouth stays a separate child object (`Mouth`) for the "eats the fruit of the Spirit" animation.
 
