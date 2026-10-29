@@ -55,6 +55,12 @@ namespace SpiritBeast.Runtime
         {
             if (EventSystem.current != null) return;
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            // StandaloneInputModule 讀舊版 Input；輸入設定錯（只開新版 Input System）時每一格都會丟例外、按鈕全部點不動
+            try { var _ = Input.mousePosition; }
+            catch (System.InvalidOperationException)
+            {
+                Debug.LogError("[介面] 按鈕點不動：Project Settings → Player → Active Input Handling 要選 Input Manager (Old)，改完重開 Unity。");
+            }
         }
 
         /// <summary>欄的實際高度（邏輯單位）；畫布要先排版過一次才準</summary>

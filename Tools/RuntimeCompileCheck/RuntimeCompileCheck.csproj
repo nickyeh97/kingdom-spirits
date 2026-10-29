@@ -30,6 +30,7 @@
     <Reference Include="$(UnityLib)/UnityEngine.CoreModule.dll" />
     <Reference Include="$(UnityLib)/UnityEngine.SharedInternalsModule.dll" />
     <Reference Include="$(UnityLib)/UnityEngine.TextRenderingModule.dll" />
+    <Reference Include="$(UnityLib)/UnityEngine.InputLegacyModule.dll" />
     <!-- 可開關的內建模組：manifest 有列才引用（新增模組時在這裡補一行） -->
     <Reference Include="$(UnityLib)/UnityEngine.IMGUIModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.imgui&quot;'))" />
     <Reference Include="$(UnityLib)/UnityEngine.JSONSerializeModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.jsonserialize&quot;'))" />
