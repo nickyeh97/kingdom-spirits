@@ -58,6 +58,54 @@ JOINTS = {
     },
 }
 JOINTS["Lion_Leader"] = JOINTS["Lion_Adult"]        # 小領袖＝成體＋皇冠、項鍊、更大的鬃毛：骨架一樣
+
+# 小羊：沒有尾巴（tail＝None，動作裡的尾巴會略過）；毛帽跟身體的羊毛是同一塊 → 頭的範圍要包住毛帽；
+# 耳朵往兩側水平伸出、插在毛帽的捲毛裡；成體以上有羊角（在頭範圍外，用 head_parts 指定整塊跟頭）。
+# 溫和（style "gentle"）：幅度 × 0.55、節奏放慢 1.3 倍。
+JOINTS["Lamb_Baby"] = {
+    "hips":  ((0, 0.30, 0.42), (0, 0.06, 0.44)),
+    "spine": ((0, 0.06, 0.44), (0, -0.10, 0.48)),
+    "neck":  ((0, -0.10, 0.48), (0, -0.22, 0.58)),
+    "head":  ((0, -0.22, 0.58), (0, -0.30, 1.00)),
+    "ear":   ((0.30, -0.28, 0.79), (0.55, -0.26, 0.72)),        # 水平往外、略往下
+    "tail":  None,
+    "front": [(0.15, -0.08, 0.32), (0.15, -0.06, 0.17), (0.15, -0.08, 0.04), (0.15, -0.14, 0.02)],
+    "hind":  [(0.15, 0.20, 0.32), (0.15, 0.18, 0.17), (0.15, 0.20, 0.04), (0.15, 0.14, 0.02)],
+    "head_center": (0, -0.32, 0.72), "head_radii": (0.36, 0.34, 0.34),
+    "eye": (0.12, -0.545, 0.74), "eye_radii": (0.075, 0.05, 0.095),
+    "toy": (0, -0.26, 0.07), "toy_radius": 0.07,
+    "style": "gentle", "k": 1.0, "ear_radius": 0.12, "toy_roll": 0.30,
+}
+JOINTS["Lamb_Adult"] = {
+    "hips":  ((0, 0.42, 0.66), (0, 0.10, 0.66)),
+    "spine": ((0, 0.10, 0.66), (0, -0.22, 0.72)),
+    "neck":  ((0, -0.22, 0.72), (0, -0.38, 0.95)),
+    "head":  ((0, -0.38, 0.95), (0, -0.47, 1.40)),
+    "ear":   ((0.25, -0.56, 1.03), (0.49, -0.58, 0.97)),
+    "tail":  None,
+    "front": [(0.18, -0.22, 0.56), (0.18, -0.20, 0.32), (0.18, -0.225, 0.06), (0.18, -0.28, 0.02)],
+    "hind":  [(0.18, 0.38, 0.56), (0.18, 0.36, 0.32), (0.18, 0.385, 0.06), (0.18, 0.33, 0.02)],
+    "head_center": (0, -0.48, 1.10), "head_radii": (0.36, 0.33, 0.34),
+    "head_parts": [((0.368, -0.24, 1.174), 0.16)],                  # 羊角（螺旋中心，lamb_adult.py 的 HORN_CENTER）
+    "eye": (0.110, -0.685, 1.118), "eye_radii": (0.069, 0.046, 0.087),
+    "toy": (0, -0.42, 0.08), "toy_radius": 0.08,
+    "style": "gentle", "k": 1.6, "ear_radius": 0.13, "toy_roll": 0.45,
+}
+JOINTS["Lamb_Leader"] = {
+    "hips":  ((0, 0.44, 0.76), (0, 0.10, 0.76)),
+    "spine": ((0, 0.10, 0.76), (0, -0.24, 0.84)),
+    "neck":  ((0, -0.24, 0.84), (0, -0.42, 1.15)),
+    "head":  ((0, -0.42, 1.15), (0, -0.52, 1.62)),
+    "ear":   ((0.24, -0.60, 1.25), (0.48, -0.62, 1.19)),
+    "tail":  None,
+    "front": [(0.17, -0.22, 0.64), (0.17, -0.20, 0.36), (0.17, -0.225, 0.06), (0.17, -0.28, 0.02)],
+    "hind":  [(0.17, 0.40, 0.64), (0.17, 0.38, 0.36), (0.17, 0.405, 0.06), (0.17, 0.35, 0.02)],
+    "head_center": (0, -0.52, 1.32), "head_radii": (0.35, 0.33, 0.33),
+    "head_parts": [((0.378, -0.302, 1.392), 0.18)],                 # 羊角（lamb_leader.py 的 HORN_CENTER）
+    "eye": (0.108, -0.72, 1.338), "eye_radii": (0.07, 0.05, 0.07),
+    "toy": (0, -0.42, 0.08), "toy_radius": 0.08,
+    "style": "gentle", "k": 1.8, "ear_radius": 0.13, "toy_roll": 0.45,
+}
 J = JOINTS.get(NAME)
 if J is None:
     raise SystemExit(f"rig_quadruped.py 還沒有 {NAME} 的關節位置，請在 JOINTS 加一筆")
@@ -126,6 +174,49 @@ bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=J["toy_radius"] * 1.03, d
 band = bpy.context.active_object; band.name = "ToyBand"
 bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 extras.append(finish_part(band, BAND, "toy", J["toy"]))
+# 預算：加了零件後超過 8000 三角形（小羊成體、小領袖本來就接近上限）→ 只把最大的一塊（羊毛／身體）減面一點點。
+# 做法：把那一塊「分離」成獨立物件、減面、再併回來——其他零件完全不動。
+# （試過在整個物件上加 Decimate＋頂點群組限制，結果群組外的小零件也被減掉，玩具球縮成一個點）
+BUDGET = 8000
+def tris_of(objs):
+    n = 0
+    for o in objs:
+        if o:
+            o.data.calc_loop_triangles(); n += len(o.data.loop_triangles)
+    return n
+over = tris_of([body, mouth] + extras) - BUDGET
+if over > 0:
+    me_ = body.data
+    par = list(range(len(me_.vertices)))
+    def _f(i):
+        while par[i] != i:
+            par[i] = par[par[i]]; i = par[i]
+        return i
+    for e in me_.edges:
+        a_, b_ = _f(e.vertices[0]), _f(e.vertices[1])
+        if a_ != b_: par[a_] = b_
+    rts = [_f(i) for i in range(len(me_.vertices))]
+    big = max(set(rts), key=rts.count)
+    for v in me_.vertices:
+        v.select = rts[v.index] == big
+    for x in bpy.context.view_layer.objects:
+        x.select_set(x is body)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.separate(type='SELECTED')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    part = next(o for o in bpy.context.selected_objects if o is not body)
+    part_tris = tris_of([part])
+    dec = part.modifiers.new("Trim", 'DECIMATE'); dec.ratio = 1.0 - (over + 30) / part_tris
+    bpy.context.view_layer.objects.active = part
+    bpy.ops.object.modifier_apply(modifier=dec.name)
+    for x in bpy.context.view_layer.objects:
+        x.select_set(x is body or x is part)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
+    print(f"預算：超過 {over} 個三角形 → 最大的一塊減面到 {dec.ratio:.3f}，現在 {tris_of([body, mouth] + extras)}")
+N_BODY = len(body.data.vertices)               # 修剪後重新算：之後的頂點都是加進來的零件
+
 for x in bpy.context.view_layer.objects:
     x.select_set(x is body or x in extras)
 bpy.context.view_layer.objects.active = body
@@ -176,9 +267,10 @@ bone("mouth", m, (m[0], m[1], m[2] + 0.04), parent="head")                # 嘴�
 tc = J["toy"]
 bone("toy", tc, (tc[0], tc[1], tc[2] + 0.1))                             # 玩具球：獨立的骨頭（不掛 root：小獅跳起來時球留在地上）
 t = J["tail"]
-bone("tail.1", t[0], t[1], parent="hips")
-bone("tail.2", t[1], t[2], parent="tail.1", connect=True)
-bone("tail.3", t[2], t[3], parent="tail.2", connect=True)
+if t:                                       # 小羊沒有尾巴：不放尾巴骨，動作裡的尾巴自動略過
+    bone("tail.1", t[0], t[1], parent="hips")
+    bone("tail.2", t[1], t[2], parent="tail.1", connect=True)
+    bone("tail.3", t[2], t[3], parent="tail.2", connect=True)
 
 LEGS = {}   # 腿名 → (上段, 下段, 腳掌, IK 控制骨)
 for side, f in (("L", lambda p: p), ("R", mirror)):
@@ -225,7 +317,7 @@ bpy.ops.object.mode_set(mode='OBJECT')
 # 自動權重（bone heat）遇到這種很多零件疊在一起的網格常常失敗，所以自己算：
 #  ① 頭的範圍裡（含鬃毛、眼睛、耳朵）→ 跟頭骨（耳朵附近跟耳朵骨）
 #  ② 其他頂點 → 離最近的兩根骨頭，越近權重越大（關節處平滑過渡）
-#  ③ 小零件（眼睛、鼻子、肉球…）整塊用同一組權重 → 動的時候不會變形
+#  ③ 小零件（< 8 公分：鼻子、肉球…）整塊用同一組權重 → 動的時候不會變形
 import numpy as np
 me = body.data
 co = np.array([v.co[:] for v in me.vertices])
@@ -275,18 +367,34 @@ for rt in np.unique(roots):
     c = co[m].mean(axis=0)
     if np.linalg.norm((c - hc) / hr) < 1.0:
         w_head[m] = np.maximum(w_head[m], 1.0)
-# 耳朵附近 → 耳朵骨（放在 ③b 後面：耳朵也是「中心在頭裡」的小塊，不然會被改回頭骨）
+# 指定跟頭走的零件（小羊的羊角：在頭範圍外，整塊中心在指定點附近就跟頭）
+for (pt, rad) in J.get("head_parts", []):
+    for side, f in (("L", lambda p: p), ("R", mirror)):
+        for rt in np.unique(roots):
+            m = roots == rt
+            if not m[N_BODY:].any() and np.linalg.norm(co[m].mean(axis=0) - np.array(f(pt))) < rad:
+                w_head[m] = 1.0
+# 耳朵 → 耳朵骨：整塊零件的中心在耳朵附近才算（放在 ③b 後面，不然會被改回頭骨）。
+# 不用「耳朵周圍的球」：小羊的耳朵插在毛帽的捲毛裡，用球會把旁邊的羊毛一起抓走
 for side, f in (("L", lambda p: p), ("R", mirror)):
     ear_c = np.array(f(J["ear"][0])) + 0.5 * (np.array(f(J["ear"][1])) - np.array(f(J["ear"][0])))
-    on_ear = np.linalg.norm(co - ear_c, axis=1) < J.get("ear_radius", 0.09)
-    W[on_ear] = 0; W[on_ear, names.index(f"ear.{side}")] = 1
-    w_head[on_ear] = 0
+    for rt in np.unique(roots):
+        m = roots == rt
+        if m[N_BODY:].any() or np.linalg.norm(co[m].mean(axis=0) - ear_c) > J.get("ear_radius", 0.09):
+            continue
+        W[m] = 0; W[m, names.index(f"ear.{side}")] = 1
+        w_head[m] = 0
 W = W * (1 - w_head[:, None]) + head_w[None, :] * w_head[:, None]
 
 # ③ 小零件整塊同一組權重（連在一起的頂點算一塊）
+#    只限「實際尺寸小」的零件（< 8 公分：肉球、鼻子、淚痕…）。v008 以前用「頂點數 < 250」判斷，
+#    結果整條腿（頂點也少）被當成一塊硬的、不會在膝蓋彎，腳掌跟著 IK 走 → 腳掌跟腿分開（組長發現）
 for rt in np.unique(roots):
     m = roots == rt
-    if m.sum() < 250 and not m[N_BODY:].any():
+    if m[N_BODY:].any():
+        continue
+    extent = (co[m].max(axis=0) - co[m].min(axis=0)).max()
+    if extent < 0.08:
         W[m] = W[m].mean(axis=0)
 
 # ④ 眼睛（深色＋白色反光點，在眼睛範圍裡）→ 100% 跟 eye 骨（睡覺時整顆縮小）
@@ -321,13 +429,14 @@ if mouth:
 # 活潑（小獅）：幅度大、節奏快、有預備動作（蹲 → 跳）；溫和（小羊、鴿子）：幅度小、慢。
 LIVELY = J["style"] == "lively"
 AMP = 1.0 if LIVELY else 0.55
+TF = 1.0 if LIVELY else 1.3                     # 溫和的動作慢一點（影格數 × 1.3）
 
 def action(name, frames):
     act = bpy.data.actions.new(name)
     act.use_fake_user = True                          # 沒有掛在骨架上也會存檔
     rig.animation_data_create()
     rig.animation_data.action = act
-    bpy.context.scene.frame_start, bpy.context.scene.frame_end = 0, frames
+    bpy.context.scene.frame_start, bpy.context.scene.frame_end = 0, round(frames * TF)
     return act
 
 def rest_all():
@@ -345,7 +454,10 @@ def key(frame, **poses):
     loc 是「骨頭自己的座標」；wloc 是「世界座標」的位移（+Y 往後、−Y 往前、+Z 往上），自動換算成骨頭座標。
     控制骨（腳的 IK、根骨、玩具）一律用 wloc：骨頭是斜放的，自己的「上」不一定是世界的上
     （第一次試做時用 loc 抬腳，腳掌反而往地下鑽、往前滑了 3 公分，就是這個原因）。"""
+    frame = round(frame * TF)
     for bname, p in poses.items():
+        if bname not in rig.pose.bones:     # 這個模型沒有的骨頭（小羊的尾巴）
+            continue
         pb = rig.pose.bones[bname]
         if "wloc" in p:
             # 體型倍率 K：同一個動作在大隻的身上移動距離跟著放大（球的滾動距離各模型自己設定，不再乘）
@@ -410,11 +522,13 @@ OPEN, SHUT = 1.0, 1.0 / HIDDEN                  # 骨頭縮放：1＝原樣；1/
 # Wave（揮手打招呼，1.5 秒，每次打開遊戲）：重心往後一點、抬起右前腳（肉球朝前）左右揮兩下、歪頭、搖尾巴
 act = action("Wave", 45)
 rest_all()
-for f, lift, wave, lean, wag in ((0, 0, 0, 0, 0), (8, 1, 0, 1, 1), (15, 1, 1, 1, -1), (21, 1, -1, 1, 1),
-                                 (27, 1, 1, 1, -1), (33, 1, -1, 1, 1), (39, 0.3, 0, 0.5, 0), (45, 0, 0, 0, 0)):
+# 腳先垂直抬起（第 4 格，還沒往前）→ 再抬高往前；放下時先收回、最後垂直落地 → 腳掌不會在地上拖著滑
+for f, up, fwd, wave, lean, wag in ((0, 0, 0, 0, 0, 0), (4, 0.45, 0, 0, 0.5, 0.5), (8, 1, 1, 0, 1, 1), (15, 1, 1, 1, 1, -1),
+                                    (21, 1, 1, -1, 1, 1), (27, 1, 1, 1, 1, -1), (33, 1, 1, -1, 1, 1),
+                                    (38, 0.45, 0, 0, 0.5, 0), (45, 0, 0, 0, 0, 0)):
     key(f,
-        **{"hand_ik.R": {"wloc": (0.035 * wave * AMP, -0.07 * lift, 0.17 * lift * (0.6 + 0.4 * AMP)),
-                         "rot": (-60 * lift, 0, 0)},                 # 腳掌往上翻 → 肉球朝前
+        **{"hand_ik.R": {"wloc": (0.035 * wave * AMP, -0.07 * fwd, 0.17 * up * (0.6 + 0.4 * AMP)),
+                         "rot": (-60 * up, 0, 0)},                   # 腳掌往上翻 → 肉球朝前
            "hips": {"wloc": (0, 0, -0.02 * lean * AMP)},
            "spine": {"rot": (-6 * lean * AMP, 0, 0)},               # 胸口抬起來
            "head": {"rot": (0, 0, 8 * lean * AMP)},
