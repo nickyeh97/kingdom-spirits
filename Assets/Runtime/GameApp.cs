@@ -3,12 +3,13 @@ using System.Collections;
 using System.Linq;
 using SpiritBeast.Core;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace SpiritBeast.Runtime
 {
     /// <summary>
     /// G1 核心迴圈（GDD §4）：S0 載入 → S1 第一次相遇 → S2 靈獸之家 ⇄ S3 服事卡／S4 換裝扮／S5 登錄服事 → S6 慶祝。
-    /// 介面是 G1 的占位版（IMGUI），G2/G3 換成正式 UGUI 與美術；流程與規則都在 Core，畫面只負責呈現。
+    /// 介面用 UGUI（UiKit；G2 由 IMGUI 改過來）；流程與規則都在 Core，畫面只負責呈現。
     /// 遊戲內沒有任何文字輸入（手機 Web 的中文輸入體驗差），要打字的都在牧區平台。
     /// </summary>
     public sealed class GameApp : MonoBehaviour
@@ -69,6 +70,7 @@ namespace SpiritBeast.Runtime
         {
             SetupCamera();
             _beast = new GameObject("Beast").AddComponent<BeastView>();
+            Render();   // 「靈獸準備中…」
 
             var auth = AuthFragment.Parse(_fragment);
             var configAsset = Resources.Load<TextAsset>("supabase");
@@ -130,10 +132,11 @@ namespace SpiritBeast.Runtime
         IEnumerator SaveLook()
         {
             _busy = true;
+            Render();
             long failed = -1;
             yield return _api.Send(SupabaseApi.UpsertProfile(_childId, _pickVariant, _pickPalette), _ => { }, c => failed = c);
             _busy = false;
-            if (failed >= 0) { _notice = SupabaseApi.DescribeError(failed); yield break; }
+            if (failed >= 0) { _notice = SupabaseApi.DescribeError(failed); Render(); yield break; }
             _profile = new BeastProfile(_pickVariant, _pickPalette,
                 _profile != null ? _profile.Encouragements : new string[0]);
             GoHome();
@@ -142,11 +145,12 @@ namespace SpiritBeast.Runtime
         IEnumerator SaveLog()
         {
             _busy = true;
+            Render();
             string json = null;
             long failed = -1;
             yield return _api.Send(SupabaseApi.InsertEntry(_childId, _pickItem, _pickFruit), s => json = s, c => failed = c);
             _busy = false;
-            if (failed >= 0) { _notice = SupabaseApi.DescribeError(failed); yield break; }
+            if (failed >= 0) { _notice = SupabaseApi.DescribeError(failed); Render(); yield break; }
 
             ServiceEntry saved = null;
             try { saved = SupabaseApi.ParseEntries(json).FirstOrDefault(); } catch (Exception) { }
@@ -187,240 +191,233 @@ namespace SpiritBeast.Runtime
             _camera.enabled = beastShare > 0f;
             if (beastShare > 0f) _camera.rect = new Rect(0f, 1f - beastShare, 1f, beastShare);
             _beast.gameObject.SetActive(beastShare > 0f && page != Page.Loading);
+            Render();
         }
 
         void ShowPreview() =>
             _beast.Show(_pickVariant, _pickPalette, _page == Page.FirstMeet || _card == null ? 1 : _card.Stage);
 
-        // ---- 畫面（IMGUI 占位版）----
+        // ---- 畫面（UGUI，UiKit 以 400 寬的邏輯座標排版）----
+        // 狀態一變就整頁重建（Render）：頁面元件少，重建比逐一更新簡單、不會漏改。
 
-        float _s, _x0, _builtScale;
-        Font _font;
-        GUIStyle _title, _text, _small, _button, _bubbleStyle;
-        static readonly Color Ink = new Color(0.29f, 0.23f, 0.16f);
-        static readonly Color Paper = new Color(0.99f, 0.96f, 0.89f);
-        static readonly Color Leaf = new Color(0.55f, 0.78f, 0.49f);
+        RectTransform _column, _root, _ui, _background;
+        bool _wasEvolving;
+        Vector2Int _screen;
+        float _height, _top;
 
-        /// <summary>以 400 寬的邏輯座標排版，換算成實際像素（字型直接用實際大小算繪，不會糊）</summary>
-        Rect R(float x, float y, float w, float h) => new Rect(_x0 + x * _s, y * _s, w * _s, h * _s);
-        float LogicalHeight => Screen.height / _s;
-        float BeastBottom => _camera != null && _camera.enabled ? LogicalHeight * _camera.rect.height : 0f;
-
-        void EnsureStyles()
+        void Update()
         {
-            float width = Mathf.Min(Screen.width, Screen.height * 0.62f);
-            _s = width / 400f;
-            _x0 = (Screen.width - width) / 2f;
-            if (_title != null && Mathf.Approximately(_builtScale, _s)) return;
-            _builtScale = _s;
-            if (_font == null) _font = Resources.Load<Font>("Fonts/NotoSansTC-Subset");
-
-            GUIStyle Make(GUIStyle from, int size, TextAnchor anchor)
-            {
-                var st = new GUIStyle(from) { fontSize = Mathf.RoundToInt(size * _s), wordWrap = true, alignment = anchor, richText = false };
-                if (_font != null) st.font = _font;
-                return st;
-            }
-            _title = Make(GUI.skin.label, 22, TextAnchor.MiddleCenter);
-            _text = Make(GUI.skin.label, 17, TextAnchor.MiddleLeft);
-            _small = Make(GUI.skin.label, 14, TextAnchor.MiddleCenter);
-            _bubbleStyle = Make(GUI.skin.box, 17, TextAnchor.MiddleCenter);
-            _button = Make(GUI.skin.button, 18, TextAnchor.MiddleCenter);
-            foreach (var st in new[] { _title, _text, _small }) st.normal.textColor = Ink;
-            _bubbleStyle.normal.textColor = Color.white;
-            _bubbleStyle.padding = new RectOffset(12, 12, 10, 10);
+            bool evolving = _beast != null && _beast.Evolving;
+            var screen = new Vector2Int(Screen.width, Screen.height);
+            // 畫布第一個影格的尺寸可能還沒算好：欄的高度一變就重畫
+            bool resized = _column != null && Mathf.Abs(_column.rect.height - _height) > 0.5f;
+            if ((_page == Page.Celebrate && evolving != _wasEvolving) || screen != _screen || resized) Render();
         }
 
-        void OnGUI()
+        void Render()
         {
-            EnsureStyles();
-            float top = BeastBottom;
-            Fill(new Rect(0, top * _s, Screen.width, Screen.height - top * _s), Paper);
-            GUI.enabled = !_busy;
+            if (_column == null) _column = UiKit.CreateCanvas("GameUI", out _root);
+            if (_ui != null) Destroy(_ui.gameObject);
+            if (_background != null) Destroy(_background.gameObject);
+            _ui = UiKit.Group(_column, "Page");
+            _background = UiKit.Group(_root, "Background");
+            _background.SetAsFirstSibling();
+            _screen = new Vector2Int(Screen.width, Screen.height);
+            _wasEvolving = _beast != null && _beast.Evolving;
+
+            _height = UiKit.Height(_column);
+            float share = _camera != null && _camera.enabled ? _camera.rect.height : 0f;
+            _top = _height * share;
+            UiKit.Band(_background, UiKit.Paper, 0f, 1f - share);
 
             switch (_page)
             {
                 case Page.Loading: DrawLoading(); break;
                 case Page.Error: DrawError(); break;
                 case Page.FirstMeet: DrawPicker(true); break;
-                case Page.Home: DrawHome(top); break;
-                case Page.Card: DrawCard(top); break;
+                case Page.Home: DrawHome(); break;
+                case Page.Card: DrawCard(); break;
                 case Page.Wardrobe: DrawPicker(false); break;
-                case Page.Log: DrawLog(top); break;
-                case Page.Celebrate: DrawCelebrate(top); break;
+                case Page.Log: DrawLog(); break;
+                case Page.Celebrate: DrawCelebrate(); break;
             }
 
-            GUI.enabled = true;
-            if (_busy) GUI.Label(R(0, LogicalHeight - 130, 400, 30), "儲存中…", _small);
-            if (_notice != null) GUI.Label(R(16, LogicalHeight - 130, 368, 40), _notice, _small);
+            if (_busy) UiKit.Label(_ui, "儲存中…", 14, 0, _height - 130, 400, 30);
+            if (_notice != null) UiKit.Label(_ui, _notice, 14, 16, _height - 130, 368, 40);
         }
+
+        // 按鈕的共同設定：儲存中全部不能按
+        Button Btn(string text, float x, float y, float w, float h, Action onClick, Color? tint = null,
+                   int size = 18, string icon = null, bool enabled = true) =>
+            UiKit.Button(_ui, text, x, y, w, h, onClick, tint, size, icon, enabled && !_busy);
 
         void DrawLoading()
         {
-            GUI.Label(R(0, LogicalHeight / 2 - 30, 400, 60), "靈獸準備中…", _title);
+            UiKit.Label(_ui, "靈獸準備中…", 22, 0, _height / 2 - 30, 400, 60);
         }
 
         void DrawError()
         {
-            GUI.Label(R(24, LogicalHeight / 2 - 80, 352, 100), _error, _title);
-            GUI.Label(R(24, LogicalHeight / 2 + 30, 352, 60), "可以關掉這個頁面，回到牧區平台再開一次。", _small);
+            UiKit.Label(_ui, _error, 22, 24, _height / 2 - 80, 352, 100);
+            UiKit.Label(_ui, "可以關掉這個頁面，回到牧區平台再開一次。", 14, 24, _height / 2 + 30, 352, 60);
         }
 
-        void DrawHome(float top)
+        void DrawHome()
         {
             var v = Catalog.FindVariant(_profile.Variant);
-            GUI.Label(R(0, 8, 400, 34), (v != null ? v.DisplayName : _profile.Variant) + " · " + GrowthRules.StageName(_card.Stage), _title);
-            GUI.Label(R(0, 40, 400, 24), _childName + " 的靈獸", _small);
+            UiKit.Label(_ui, (v != null ? v.DisplayName : _profile.Variant) + " · " + GrowthRules.StageName(_card.Stage), 22, 0, 8, 400, 34);
+            UiKit.Label(_ui, _childName + " 的靈獸", 14, 0, 40, 400, 24);
             // 點靈獸：跳一下（沒有其他玩法）
-            if (GUI.Button(R(0, 64, 400, top - 70), GUIContent.none, GUIStyle.none)) _beast.Hop();
+            UiKit.Hotspot(_ui, 0, 64, 400, _top - 70, () => _beast.Hop());
 
-            Bubble(R(24, top + 16, 352, 120), _bubble);
+            UiKit.Bubble(_ui, _bubble, 24, _top + 16, 352, 120);
 
-            float y = LogicalHeight - 84;
-            if (GUI.Button(R(16, y, 116, 60), "服事卡", _button)) Go(Page.Card);
-            if (GUI.Button(R(142, y, 116, 60), "換裝扮", _button))
+            float y = _height - 84;
+            Btn("服事卡", 16, y, 116, 60, () => Go(Page.Card));
+            Btn("換裝扮", 142, y, 116, 60, () =>
             {
                 _pickVariant = _profile.Variant;
                 _pickPalette = _profile.Palette;
                 Go(Page.Wardrobe);
-            }
-            if (Colored(R(268, y, 116, 60), "＋1 服事", Leaf))
+            });
+            Btn("＋1 服事", 268, y, 116, 60, () =>
             {
                 _logStep = 0; _parentConfirmed = false; _pickItem = null; _pickFruit = null;
                 Go(Page.Log);
-            }
+            }, UiKit.Leaf);
         }
 
-        void DrawCard(float top)
+        void DrawCard()
         {
-            GUI.Label(R(0, 8, 400, 34), "服事卡", _title);
-            float y = top + 12;
+            UiKit.Label(_ui, "服事卡", 22, 0, 8, 400, 34);
+            float y = _top + 12;
             foreach (var row in _card.Rows)
             {
-                GUI.Label(R(24, y, 220, 30), row.Item + (row.Retired ? "（已停用）" : ""), _text);
+                var icon = IconPath.Service(row.Item);
+                var iconTex = icon != null ? Resources.Load<Texture2D>(icon) : null;
+                float x = 24;
+                if (iconTex != null)
+                {
+                    var raw = new GameObject("Icon", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+                    raw.transform.SetParent(_ui, false);
+                    raw.texture = iconTex;
+                    raw.raycastTarget = false;
+                    UiKit.Place(raw, x, y + 1, 28, 28);
+                    x += 34;
+                }
+                UiKit.Label(_ui, row.Item + (row.Retired ? "（已停用）" : ""), 17, x, y, 244 - x, 30, TextAnchor.MiddleLeft);
                 var right = row.Unexplored ? "1 等 · 等你來探索" : row.Level + " 等";
-                var st = new GUIStyle(_text) { alignment = TextAnchor.MiddleRight };
-                GUI.Label(R(200, y, 176, 30), right, st);
+                UiKit.Label(_ui, right, 17, 200, y, 176, 30, TextAnchor.MiddleRight);
                 y += 32;
             }
             y += 10;
-            GUI.Label(R(24, y, 352, 28), "最近的服事", _text);
+            UiKit.Label(_ui, "最近的服事", 17, 24, y, 352, 28, TextAnchor.MiddleLeft);
             y += 30;
             var recent = _card.Recent(10);
-            if (recent.Count == 0) GUI.Label(R(24, y, 352, 26), "還沒有紀錄，第一次服事就從這裡開始。", _small);
+            if (recent.Count == 0) UiKit.Label(_ui, "還沒有紀錄，第一次服事就從這裡開始。", 14, 24, y, 352, 26);
             foreach (var e in recent)
             {
-                if (y > LogicalHeight - 110) break;
-                GUI.Label(R(24, y, 352, 26), DisplayText.Date(e.CreatedAt) + "　" + e.Item + (e.Fruit != null ? " · " + e.Fruit : ""), _small);
+                if (y > _height - 110) break;
+                UiKit.Label(_ui, DisplayText.Date(e.CreatedAt) + "　" + e.Item + (e.Fruit != null ? " · " + e.Fruit : ""), 14, 24, y, 352, 26);
                 y += 26;
             }
-            if (GUI.Button(R(130, LogicalHeight - 76, 140, 56), "回到靈獸", _button)) GoHome();
+            Btn("回到靈獸", 130, _height - 76, 140, 56, GoHome);
         }
 
         void DrawPicker(bool first)
         {
-            float top = BeastBottom;
-            GUI.Label(R(0, 8, 400, 34), first ? "天父為你預備了一位夥伴" : "換裝扮", _title);
-            if (first) GUI.Label(R(0, 40, 400, 24), _childName + "，選一位陪你一起長大的靈獸吧", _small);
+            UiKit.Label(_ui, first ? "天父為你預備了一位夥伴" : "換裝扮", 22, 0, 8, 400, 34);
+            if (first) UiKit.Label(_ui, _childName + "，選一位陪你一起長大的靈獸吧", 14, 0, 40, 400, 24);
 
-            float y = top + 14;
+            float y = _top + 14;
             var variants = Catalog.AvailableVariants.ToList();
             float w = 352f / variants.Count;
             for (int i = 0; i < variants.Count; i++)
             {
-                bool on = variants[i].Id == _pickVariant;
+                var id = variants[i].Id;
                 // 靈獸名稱一律英文顯示（組長裁決 2026-09-30）
-                if (Colored(R(24 + i * w, y, w - 8, 56), variants[i].DisplayName, on ? Leaf : Color.white))
+                Btn(variants[i].DisplayName, 24 + i * w, y, w - 8, 56, () =>
                 {
-                    _pickVariant = variants[i].Id;
+                    _pickVariant = id;
                     ShowPreview();
-                }
+                    Render();
+                }, id == _pickVariant ? UiKit.Leaf : Color.white);
             }
 
             y += 76;
-            GUI.Label(R(24, y, 352, 26), "選顏色", _text);
+            UiKit.Label(_ui, "選顏色", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
             y += 30;
             for (int i = 0; i < Catalog.Palettes.Count; i++)
             {
                 var p = Catalog.Palettes[i];
-                var rect = R(24 + (i % 4) * 88, y + (i / 4) * 62, 80, 54);
-                if (p.Id == _pickPalette) Fill(new Rect(rect.x - 4, rect.y - 4, rect.width + 8, rect.height + 8), Ink);
-                Fill(rect, ColorUtility.TryParseHtmlString(p.Main, out var c) ? c : Color.white);
-                if (GUI.Button(rect, GUIContent.none, GUIStyle.none))
+                UiKit.Swatch(_ui, p, p.Id == _pickPalette, 24 + (i % 4) * 88, y + (i / 4) * 62, 80, 54, () =>
                 {
+                    if (_busy) return;
                     _pickPalette = p.Id;
                     ShowPreview();
-                }
+                    Render();
+                });
             }
 
-            float by = LogicalHeight - 84;
+            float by = _height - 84;
             if (first)
-            {
-                if (Colored(R(100, by, 200, 60), "就是你了！", Leaf)) StartCoroutine(SaveLook());
-            }
+                Btn("就是你了！", 100, by, 200, 60, () => StartCoroutine(SaveLook()), UiKit.Leaf);
             else
             {
-                if (GUI.Button(R(40, by, 150, 60), "取消", _button)) GoHome();
-                if (Colored(R(210, by, 150, 60), "儲存", Leaf)) StartCoroutine(SaveLook());
+                Btn("取消", 40, by, 150, 60, GoHome);
+                Btn("儲存", 210, by, 150, 60, () => StartCoroutine(SaveLook()), UiKit.Leaf);
             }
         }
 
-        void DrawLog(float top)
+        void DrawLog()
         {
-            GUI.Label(R(0, 8, 400, 34), "＋1 服事", _title);
-            float y = top + 14;
+            UiKit.Label(_ui, "＋1 服事", 22, 0, 8, 400, 34);
+            float y = _top + 14;
             switch (_logStep)
             {
                 case 0:
                     // 家長守門：只是提醒（UX），真正的邊界是資料庫 RLS——只有綁定的家長帳號寫得進去
-                    GUI.Label(R(24, y, 352, 80), "請家長確認：紙本服事卡上已經有老師的簽名。", _text);
-                    if (Colored(R(24, y + 90, 352, 64), _parentConfirmed ? "已確認：老師簽過名了" : "我是家長，已看到老師的簽名",
-                            _parentConfirmed ? Leaf : Color.white))
-                        _parentConfirmed = !_parentConfirmed;
-                    GUI.enabled = !_busy && _parentConfirmed;
-                    if (GUI.Button(R(210, LogicalHeight - 84, 150, 60), "下一步", _button)) _logStep = 1;
-                    GUI.enabled = !_busy;
+                    UiKit.Label(_ui, "請家長確認：紙本服事卡上已經有老師的簽名。", 17, 24, y, 352, 80, TextAnchor.MiddleLeft);
+                    Btn(_parentConfirmed ? "已確認：老師簽過名了" : "我是家長，已看到老師的簽名", 24, y + 90, 352, 64,
+                        () => { _parentConfirmed = !_parentConfirmed; Render(); }, _parentConfirmed ? UiKit.Leaf : Color.white);
+                    Btn("下一步", 210, _height - 84, 150, 60, () => { _logStep = 1; Render(); }, enabled: _parentConfirmed);
                     break;
                 case 1:
-                    GUI.Label(R(24, y, 352, 30), "這次服事的項目是？", _text);
+                    UiKit.Label(_ui, "這次服事的項目是？", 17, 24, y, 352, 30, TextAnchor.MiddleLeft);
                     var items = _card.LoggableItems;
-                    if (items.Count == 0) GUI.Label(R(24, y + 40, 352, 60), "目前沒有可登錄的服事項目，請通知同工。", _small);
+                    if (items.Count == 0) UiKit.Label(_ui, "目前沒有可登錄的服事項目，請通知同工。", 14, 24, y + 40, 352, 60);
                     for (int i = 0; i < items.Count; i++)
                     {
-                        if (GUI.Button(R(24 + (i % 2) * 180, y + 40 + (i / 2) * 66, 172, 58), items[i], _button))
-                        {
-                            _pickItem = items[i];
-                            _logStep = 2;
-                        }
+                        var item = items[i];
+                        Btn(item, 24 + (i % 2) * 180, y + 40 + (i / 2) * 66, 172, 58,
+                            () => { _pickItem = item; _logStep = 2; Render(); }, size: 15, icon: IconPath.Service(item));
                     }
                     break;
                 case 2:
-                    GUI.Label(R(24, y, 352, 30), "這次服事，你嘗到哪一顆果子？", _text);
+                    UiKit.Label(_ui, "這次服事，你嘗到哪一顆果子？", 17, 24, y, 352, 30, TextAnchor.MiddleLeft);
                     for (int i = 0; i < Catalog.Fruits.Count; i++)
                     {
-                        if (GUI.Button(R(24 + (i % 3) * 120, y + 40 + (i / 3) * 62, 112, 54), Catalog.Fruits[i].Name, _button))
-                        {
-                            _pickFruit = Catalog.Fruits[i].Name;
-                            _logStep = 3;
-                        }
+                        var fruit = Catalog.Fruits[i];
+                        Btn(fruit.Name, 24 + (i % 3) * 120, y + 40 + (i / 3) * 62, 112, 54,
+                            () => { _pickFruit = fruit.Name; _logStep = 3; Render(); }, icon: IconPath.Fruit(fruit));
                     }
-                    if (GUI.Button(R(130, y + 236, 140, 50), "跳過", _button)) { _pickFruit = null; _logStep = 3; }
+                    Btn("跳過", 130, y + 236, 140, 50, () => { _pickFruit = null; _logStep = 3; Render(); });
                     break;
                 case 3:
-                    GUI.Label(R(24, y, 352, 30), "要記下這一次服事嗎？", _text);
-                    Bubble(R(24, y + 40, 352, 80), _pickItem + (_pickFruit != null ? " · " + _pickFruit : ""));
-                    if (GUI.Button(R(40, y + 136, 150, 54), "上一步", _button)) _logStep = 2;
-                    if (Colored(R(210, y + 136, 150, 54), "儲存", Leaf)) StartCoroutine(SaveLog());
+                    UiKit.Label(_ui, "要記下這一次服事嗎？", 17, 24, y, 352, 30, TextAnchor.MiddleLeft);
+                    UiKit.Bubble(_ui, _pickItem + (_pickFruit != null ? " · " + _pickFruit : ""), 24, y + 40, 352, 80);
+                    Btn("上一步", 40, y + 136, 150, 54, () => { _logStep = 2; Render(); });
+                    Btn("儲存", 210, y + 136, 150, 54, () => StartCoroutine(SaveLog()), UiKit.Leaf);
                     break;
             }
-            if (GUI.Button(R(40, LogicalHeight - 84, 150, 60), "取消", _button)) GoHome();
+            Btn("取消", 40, _height - 84, 150, 60, GoHome);
         }
 
-        void DrawCelebrate(float top)
+        void DrawCelebrate()
         {
             if (_beast.Evolving)
             {
-                GUI.Label(R(0, top + 40, 400, 60), "咦？靈獸發光了……", _title);
+                UiKit.Label(_ui, "咦？靈獸發光了……", 22, 0, _top + 40, 400, 60);
                 return;
             }
             var v = Catalog.FindVariant(_profile.Variant);
@@ -428,35 +425,10 @@ namespace SpiritBeast.Runtime
             var headline = _outcome.Evolved
                 ? name + " 長大了！現在是「" + GrowthRules.StageName(_outcome.StageAfter) + "」"
                 : _outcome.Item + " 升到 " + _outcome.LevelAfter + " 等！";
-            GUI.Label(R(0, 8, 400, 40), headline, _title);
-            Bubble(R(24, top + 16, 352, 120), _celebrateMessage);
-            if (_invitation != null) GUI.Label(R(24, top + 146, 352, 50), _invitation, _small);
-            if (Colored(R(130, LogicalHeight - 84, 140, 60), "好！", Leaf)) GoHome();
-        }
-
-        // ---- 小工具 ----
-
-        void Bubble(Rect rect, string text)
-        {
-            Fill(rect, new Color(0.45f, 0.36f, 0.25f, 0.92f));
-            GUI.Label(rect, text, _bubbleStyle);
-        }
-
-        bool Colored(Rect rect, string text, Color tint)
-        {
-            var old = GUI.backgroundColor;
-            GUI.backgroundColor = tint;
-            bool clicked = GUI.Button(rect, text, _button);
-            GUI.backgroundColor = old;
-            return clicked;
-        }
-
-        static void Fill(Rect rect, Color color)
-        {
-            var old = GUI.color;
-            GUI.color = color;
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = old;
+            UiKit.Label(_ui, headline, 22, 0, 8, 400, 40);
+            UiKit.Bubble(_ui, _celebrateMessage, 24, _top + 16, 352, 120);
+            if (_invitation != null) UiKit.Label(_ui, _invitation, 14, 24, _top + 146, 352, 50);
+            Btn("好！", 130, _height - 84, 140, 60, GoHome, UiKit.Leaf);
         }
     }
 }

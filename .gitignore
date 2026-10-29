@@ -28,6 +28,8 @@ Tools/CoreTests/bin/
 Tools/CoreTests/obj/
 Tools/RuntimeCompileCheck/bin/
 Tools/RuntimeCompileCheck/obj/
+Tools/UguiReference/bin/
+Tools/UguiReference/obj/
 TestResults/
 results.xml
 artifacts/

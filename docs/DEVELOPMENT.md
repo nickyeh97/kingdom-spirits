@@ -51,6 +51,7 @@
 dotnet test Tools/CoreTests
 
 # Runtime 編譯檢查：用 NuGet 的 UnityEngine 參考組件編譯 Core＋Runtime（不需要 Unity 授權）
+#   UGUI 是套件、不在 NuGet 的模組裡：Tools/UguiReference 會從 Unity 套件庫下載 com.unity.ugui 原始碼編出參考組件（要網路）
 dotnet build Tools/RuntimeCompileCheck
 
 # 同一批測試在 Unity 裡跑（EditMode）

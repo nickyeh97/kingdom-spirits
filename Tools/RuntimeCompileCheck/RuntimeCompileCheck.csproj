@@ -35,5 +35,8 @@
     <Reference Include="$(UnityLib)/UnityEngine.JSONSerializeModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.jsonserialize&quot;'))" />
     <Reference Include="$(UnityLib)/UnityEngine.UnityWebRequestModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.unitywebrequest&quot;'))" />
     <Reference Include="$(UnityLib)/UnityEngine.AnimationModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.modules.animation&quot;'))" />
+    <!-- UGUI 套件：manifest 有 com.unity.ugui 才引用（它會帶進 ui 模組）；參考組件由 Tools/UguiReference 從原始碼編出來 -->
+    <Reference Include="$(UnityLib)/UnityEngine.UIModule.dll" Condition="$(Manifest.Contains('&quot;com.unity.ugui&quot;'))" />
+    <ProjectReference Include="../UguiReference/UguiReference.csproj" Condition="$(Manifest.Contains('&quot;com.unity.ugui&quot;'))" />
   </ItemGroup>
 </Project>

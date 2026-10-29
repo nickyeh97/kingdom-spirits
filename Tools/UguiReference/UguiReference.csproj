@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    給 Runtime 編譯檢查用的 UnityEngine.UI 參考組件（UGUI 是套件，不在 UnityEngine.Modules 裡）。
+    建置時從 Unity 官方套件庫下載 com.unity.ugui 的原始碼到 obj/，用 2021.3 的模組參考編譯出來；
+    不放進版控。只用來抓「型別／成員不存在、參數錯誤」這類錯誤，執行行為以 Unity 為準。
+    版本：套件庫目前只提供 3.0.0-exp.4（Unity 6 內建的是 2.0.0），一般 UI 元件的 API 相同。
+    Shims.cs 補上 2021.3 模組裡沒有、但 UGUI 原始碼用到的型別。
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <AssemblyName>UnityEngine.UI</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>$(NoWarn);CS0618;CS0414;CS0649;CS0169;CS0067;CS0162;CS0109;CS0108;CS0114;CS0672</NoWarn>
+    <DefineConstants>UNITY_WEBGL;PACKAGE_PHYSICS;PACKAGE_PHYSICS2D;PACKAGE_ANIMATION</DefineConstants>
+    <UguiVersion>3.0.0-exp.4</UguiVersion>
+    <UguiDir>$(MSBuildThisFileDirectory)obj/ugui-$(UguiVersion)/</UguiDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Shims.cs" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" ExcludeAssets="compile" GeneratePathProperty="true" />
+  </ItemGroup>
+  <Target Name="FetchUgui" BeforeTargets="BeforeBuild">
+    <DownloadFile Condition="!Exists('$(UguiDir)package/package.json')"
+                  SourceUrl="https://download.packages.unity.com/com.unity.ugui/-/com.unity.ugui-$(UguiVersion).tgz"
+                  DestinationFolder="$(UguiDir)" />
+    <Exec Condition="!Exists('$(UguiDir)package/package.json')" WorkingDirectory="$(UguiDir)"
+          Command="tar xzf com.unity.ugui-$(UguiVersion).tgz" />
+    <ItemGroup>
+      <Compile Include="$(UguiDir)package/Runtime/UGUI/**/*.cs" />
+      <Reference Include="$(PkgUnityEngine_Modules)/lib/net45/*.dll" />
+    </ItemGroup>
+  </Target>
+</Project>

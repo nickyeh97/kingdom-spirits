@@ -39,8 +39,10 @@ namespace SpiritBeast.Core
         /// <summary>中文名稱，也是資料庫 service_card_entries.fruit 的值</summary>
         public string Name { get; }
         public string Verse { get; }
+        /// <summary>圖示檔名（Resources/Icons/Fruits/Icon），英文避免檔名用中文</summary>
+        public string Icon { get; }
 
-        public Fruit(string name, string verse) { Name = name; Verse = verse; }
+        public Fruit(string name, string icon, string verse) { Name = name; Icon = icon; Verse = verse; }
     }
 
     /// <summary>
@@ -81,15 +83,15 @@ namespace SpiritBeast.Core
         /// <summary>聖靈的果子（加拉太書 5:22–23）；名稱與資料庫 check 約束一致</summary>
         public static readonly IReadOnlyList<Fruit> Fruits = new[]
         {
-            new Fruit("仁愛", "愛是恆久忍耐，又有恩慈。（哥林多前書 13:4）"),
-            new Fruit("喜樂", "你們要靠主常常喜樂。（腓立比書 4:4）"),
-            new Fruit("和平", "使人和睦的人有福了。（馬太福音 5:9）"),
-            new Fruit("忍耐", "忍耐到底的，必然得救。（馬太福音 24:13）"),
-            new Fruit("恩慈", "要以恩慈相待。（以弗所書 4:32）"),
-            new Fruit("良善", "不可為惡所勝，反要以善勝惡。（羅馬書 12:21）"),
-            new Fruit("信實", "人在最小的事上忠心，在大事上也忠心。（路加福音 16:10）"),
-            new Fruit("溫柔", "溫柔的人有福了。（馬太福音 5:5）"),
-            new Fruit("節制", "你們要謹慎自守。（彼得前書 4:7）"),
+            new Fruit("仁愛", "love", "愛是恆久忍耐，又有恩慈。（哥林多前書 13:4）"),
+            new Fruit("喜樂", "joy", "你們要靠主常常喜樂。（腓立比書 4:4）"),
+            new Fruit("和平", "peace", "使人和睦的人有福了。（馬太福音 5:9）"),
+            new Fruit("忍耐", "patience", "忍耐到底的，必然得救。（馬太福音 24:13）"),
+            new Fruit("恩慈", "kindness", "要以恩慈相待。（以弗所書 4:32）"),
+            new Fruit("良善", "goodness", "不可為惡所勝，反要以善勝惡。（羅馬書 12:21）"),
+            new Fruit("信實", "faithfulness", "人在最小的事上忠心，在大事上也忠心。（路加福音 16:10）"),
+            new Fruit("溫柔", "gentleness", "溫柔的人有福了。（馬太福音 5:5）"),
+            new Fruit("節制", "selfcontrol", "你們要謹慎自守。（彼得前書 4:7）"),
         };
 
         public static Fruit FindFruit(string name) => Fruits.FirstOrDefault(f => f.Name == name);
@@ -107,6 +109,22 @@ namespace SpiritBeast.Core
             new ServiceItem("領讀天使-宣言/讀經/禱告", 5, true),
             new ServiceItem("環境稽核", 6, true),
         };
+
+        /// <summary>
+        /// 服事項目的圖示（Resources/Icons/Service/…）。項目名稱來自平台字典、同工可能改名，
+        /// 所以用關鍵字比對而不是完整名稱；對不到就回 null（介面只顯示文字）。
+        /// </summary>
+        public static string ServiceIcon(string item)
+        {
+            if (string.IsNullOrEmpty(item)) return null;
+            if (item.Contains("奉獻")) return "offering";
+            if (item.Contains("司琴") || item.Contains("鋼琴")) return "piano";
+            if (item.Contains("樂器")) return "instrument";
+            if (item.Contains("Vocal") || item.Contains("vocal") || item.Contains("唱")) return "vocal";
+            if (item.Contains("領讀") || item.Contains("讀經") || item.Contains("禱告") || item.Contains("宣言")) return "reading";
+            if (item.Contains("環境") || item.Contains("整潔") || item.Contains("打掃")) return "tidy";
+            return null;
+        }
 
         /// <summary>成長階段的總服事次數門檻（GDD §3.3）；永不退階</summary>
         public static readonly IReadOnlyList<int> StageThresholds = new[] { 0, 4, 12, 24 };

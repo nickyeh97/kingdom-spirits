@@ -63,6 +63,28 @@ namespace SpiritBeast.Tests
         }
 
         [Test]
+        public void Catalog_FruitIconsAreUniqueAsciiNames()
+        {
+            var icons = Catalog.Fruits.Select(f => f.Icon).ToList();
+            Assert.That(icons.Distinct().Count(), Is.EqualTo(9));
+            Assert.That(icons.All(i => i.All(c => c >= 'a' && c <= 'z')), Is.True, "檔名只用小寫英文");
+        }
+
+        [Test]
+        public void Catalog_ServiceIconMatchesPlatformItemsByKeyword()
+        {
+            // 平台目前的六項，各對到不同的圖示
+            var icons = Catalog.DemoServiceItems.Select(i => Catalog.ServiceIcon(i.Name)).ToList();
+            Assert.That(icons, Is.EqualTo(new[] { "offering", "piano", "instrument", "vocal", "reading", "tidy" }));
+            // 同工改名也對得到；對不到、空白回 null（介面只顯示文字）
+            Assert.That(Catalog.ServiceIcon("敬拜-Vocal 主唱"), Is.EqualTo("vocal"));
+            Assert.That(Catalog.ServiceIcon("領讀天使-禱告"), Is.EqualTo("reading"));
+            Assert.That(Catalog.ServiceIcon("招待"), Is.Null);
+            Assert.That(Catalog.ServiceIcon(null), Is.Null);
+            Assert.That(Catalog.ServiceIcon(""), Is.Null);
+        }
+
+        [Test]
         public void Catalog_TextNeverCompares()
         {
             // 守則紅燈 #1／#7：文案不得出現比較或罪惡感字眼
