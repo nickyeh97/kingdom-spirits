@@ -27,7 +27,15 @@ namespace SpiritBeast.Runtime
         Material _modelMaterial;
         // 有骨架動作的模型（FBX 以 Legacy 動畫匯入）：用名稱播放；沒有動作的模型用下面的程式動作（跳、轉圈）
         Animation _anim;
-        string _idleClip, _happyClip;
+        readonly Dictionary<string, string> _clips = new Dictionary<string, string>();   // 動作名（Idle…）→ Unity 裡的名稱（Rig|Idle）
+        static readonly HashSet<string> Looping = new HashSet<string> { "Idle", "Sleep" };
+        string _current;
+
+        /// <summary>動作名稱（Blender 的 Action 名）：待機、開心、揮手、吃果子、睡覺、玩玩具</summary>
+        public const string Idle = "Idle", Happy = "Happy", Wave = "Wave", Eat = "Eat", Sleep = "Sleep", PlayToy = "Play";
+
+        public bool Has(string clip) => _anim != null && _clips.ContainsKey(clip);
+        public bool Sleeping => _anim != null && _current == Sleep;
 
         public void Show(string variant, string palette, int stage)
         {
@@ -59,13 +67,26 @@ namespace SpiritBeast.Runtime
 
         public void Hop()
         {
-            if (!PlayHappy()) _hopTime = 0f;
+            if (!Play(Happy)) _hopTime = 0f;   // 睡著時點一下也是播 Happy＝醒過來
         }
 
         public void Celebrate()
         {
-            if (!PlayHappy()) _hopTime = 0f;
+            if (!Play(Happy)) _hopTime = 0f;
             _spinTime = 0f;
+        }
+
+        /// <summary>
+        /// 播一個動作：循環的（待機、睡覺）一直播到下一個動作；其他的播完自動回到待機。
+        /// 模型沒有這個動作時回傳 false（呼叫端可以改用程式動作或什麼都不做）。
+        /// </summary>
+        public bool Play(string clip)
+        {
+            if (!Has(clip) || Evolving) return false;
+            _anim.CrossFade(_clips[clip], 0.15f);
+            if (!Looping.Contains(clip)) _anim.CrossFadeQueued(_clips[Idle], 0.2f);
+            _current = clip;
+            return true;
         }
 
         /// <summary>
@@ -74,24 +95,18 @@ namespace SpiritBeast.Runtime
         void SetupAnimation(GameObject go)
         {
             _anim = go.GetComponentInChildren<Animation>();
-            _idleClip = _happyClip = null;
+            _clips.Clear();
+            _current = null;
             if (_anim == null) return;
             foreach (AnimationState st in _anim)
             {
                 var n = st.name.Substring(st.name.LastIndexOf('|') + 1);
-                if (n == "Idle") { _idleClip = st.name; st.wrapMode = WrapMode.Loop; }
-                else if (n == "Happy") { _happyClip = st.name; st.wrapMode = WrapMode.Once; }
+                _clips[n] = st.name;
+                st.wrapMode = Looping.Contains(n) ? WrapMode.Loop : WrapMode.Once;
             }
-            if (_idleClip == null) { _anim = null; return; }
-            _anim.Play(_idleClip);
-        }
-
-        bool PlayHappy()
-        {
-            if (_anim == null || _happyClip == null) return false;
-            _anim.CrossFade(_happyClip, 0.1f);
-            _anim.CrossFadeQueued(_idleClip, 0.2f);
-            return true;
+            if (!_clips.ContainsKey(Idle)) { _anim = null; _clips.Clear(); return; }
+            _anim.Play(_clips[Idle]);
+            _current = Idle;
         }
 
         /// <summary>進化過場：先放大發光，再換成新階段的樣子（約 3 秒）</summary>
@@ -104,6 +119,8 @@ namespace SpiritBeast.Runtime
         void Update()
         {
             if (_body == null) return;
+            if (_anim != null && _current != null && !Looping.Contains(_current) && !_anim.IsPlaying(_clips[_current]))
+                _current = Idle;                       // 揮手、開心…播完已經自動接回待機
             float t = Time.time;
             // 有骨架動作時呼吸由 Idle 動作負責，不再整隻上下飄
             float y = _anim != null ? 0f : Mathf.Sin(t * 2f) * 0.05f;

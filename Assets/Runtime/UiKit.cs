@@ -123,7 +123,11 @@ namespace SpiritBeast.Runtime
             t.color = color ?? Ink;
             t.supportRichText = false;
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
+            // 文字不超出框（組長 2026-10-29）：放不下就自動縮小字體，最小到原本的一半
+            t.verticalOverflow = VerticalWrapMode.Truncate;
+            t.resizeTextForBestFit = true;
+            t.resizeTextMaxSize = size;
+            t.resizeTextMinSize = Mathf.Max(8, size / 2);
             t.raycastTarget = false;
             return Place(t, x, y, w, h);
         }

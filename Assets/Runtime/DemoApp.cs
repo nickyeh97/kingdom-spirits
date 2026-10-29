@@ -42,6 +42,7 @@ namespace SpiritBeast.Runtime
             _beast = new GameObject("Beast").AddComponent<BeastView>();
             _encourager = new Encourager(null, _random);
             ResetJourney();
+            _beast.Play(BeastView.Wave);   // 每次打開都揮手打招呼（組長 2026-10-29）
             Render();
         }
 
@@ -127,8 +128,16 @@ namespace SpiritBeast.Runtime
             UiKit.Label(p, "服事 " + _card.Total + " 次　·　小領袖靈獸 Demo", 14, 0, 30, 400, 22);
             UiKit.Button(p, "渲染：" + RenderStyle.Label, 296, 4, 100, 26, () => { RenderStyle.Toggle(); Render(); }, size: 12);
             // 點靈獸：跳一下（放在選單按鈕下面，避免擋到按鈕）
+            // 動作預覽：有骨架動作的靈獸（目前小獅幼體）才按得動
+            var acts = new[] { ("揮手", BeastView.Wave), ("吃果子", BeastView.Eat), ("睡覺", BeastView.Sleep), ("玩球", BeastView.PlayToy) };
+            for (int i = 0; i < acts.Length; i++)
+            {
+                var clip = acts[i].Item2;
+                UiKit.Button(p, acts[i].Item1, 70 + i * 66, 96, 60, 26, () => _beast.Play(clip), size: 13,
+                             interactable: !evolving && _beast.Has(clip));
+            }
             // 點一下＝跳；左右滑＝轉靈獸（看每個角度）；上下滑＝鏡頭繞著靈獸上下轉（上下各 30°）
-            UiKit.Swipe(p, 0, 96, 400, top - 150, () => _beast.Hop(), Orbit);
+            UiKit.Swipe(p, 0, 128, 400, top - 182, () => _beast.Hop(), Orbit);
 
             var variants = Catalog.AvailableVariants.ToList();
             for (int i = 0; i < variants.Count; i++)

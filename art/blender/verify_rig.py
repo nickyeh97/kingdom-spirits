@@ -78,7 +78,7 @@ if rig and body:
                 if bend(u, l) * rest_bend[l] < 0 and abs(bend(u, l)) > 2:
                     worst_bend_flip.append(f"{l}@{f}")
             for pb in rig.pose.bones:
-                if pb.name == "root" or pb.name.endswith("_ik.L") or pb.name.endswith("_ik.R"):
+                if pb.name in ("root", "toy") or pb.name.endswith("_ik.L") or pb.name.endswith("_ik.R"):   # 根骨、IK 控制骨、會滾的球不算
                     continue
                 ang = math.degrees((pb.matrix_basis.to_quaternion()).angle)
                 if ang > worst_rot[0]:

@@ -179,6 +179,33 @@ namespace SpiritBeast.Runtime
             _beast.Show(_profile.Variant, _profile.Palette, _card.Stage);
             _bubble = _encourager.OnOpen();
             Go(Page.Home);
+            // 每次打開遊戲，第一次回到靈獸之家時揮手打招呼（組長 2026-10-29）
+            if (!_waved) { _waved = _beast.Play(BeastView.Wave); }
+        }
+
+        // ---- 靈獸自己的小動作（只在靈獸之家）----
+        // 一陣子沒碰：玩一下球；再久一點：睡著（點一下就醒來，播 Happy）。
+        // 只是讓靈獸看起來有生命，不提醒、不催促（守則紅燈 #2：沒有任何「回來看我」的機制）。
+        const float PlayAfter = 15f, SleepAfter = 40f;
+        bool _waved, _playedToy;
+        float _lastTouch;
+
+        void Touched()
+        {
+            _lastTouch = Time.time;
+            _playedToy = false;
+        }
+
+        void IdleBehaviour()
+        {
+            if (_page != Page.Home || _beast == null || _beast.Evolving || _beast.Sleeping) return;
+            float idle = Time.time - _lastTouch;
+            if (idle > SleepAfter) _beast.Play(BeastView.Sleep);
+            else if (idle > PlayAfter && !_playedToy)
+            {
+                _beast.Play(BeastView.PlayToy);   // 沒有這個動作的模型就什麼都不做
+                _playedToy = true;                // 每段閒置只玩一次
+            }
         }
 
         void Go(Page page)
@@ -207,6 +234,7 @@ namespace SpiritBeast.Runtime
 
         void Update()
         {
+            IdleBehaviour();
             bool evolving = _beast != null && _beast.Evolving;
             var screen = new Vector2Int(Screen.width, Screen.height);
             // 畫布第一個影格的尺寸可能還沒算好：欄的高度一變就重畫
@@ -216,6 +244,7 @@ namespace SpiritBeast.Runtime
 
         void Render()
         {
+            Touched();   // 每次重畫都是因為有操作（或換頁）
             if (_column == null) _column = UiKit.CreateCanvas("GameUI", out _root);
             if (_ui != null) Destroy(_ui.gameObject);
             if (_background != null) Destroy(_background.gameObject);
@@ -268,7 +297,7 @@ namespace SpiritBeast.Runtime
             UiKit.Label(_ui, (v != null ? v.DisplayName : _profile.Variant) + " · " + GrowthRules.StageName(_card.Stage), 22, 0, 8, 400, 34);
             UiKit.Label(_ui, _childName + " 的靈獸", 14, 0, 40, 400, 24);
             // 點靈獸：跳一下（沒有其他玩法）
-            UiKit.Hotspot(_ui, 0, 64, 400, _top - 70, () => _beast.Hop());
+            UiKit.Hotspot(_ui, 0, 64, 400, _top - 70, () => { Touched(); _beast.Hop(); });   // 睡著時點一下＝醒來
 
             UiKit.Bubble(_ui, _bubble, 24, _top + 16, 352, 120);
 
@@ -399,7 +428,7 @@ namespace SpiritBeast.Runtime
                     {
                         var fruit = Catalog.Fruits[i];
                         Btn(fruit.Name, 24 + (i % 3) * 120, y + 40 + (i / 3) * 62, 112, 54,
-                            () => { _pickFruit = fruit.Name; _logStep = 3; Render(); }, icon: IconPath.Fruit(fruit));
+                            () => { _pickFruit = fruit.Name; _logStep = 3; _beast.Play(BeastView.Eat); Render(); }, icon: IconPath.Fruit(fruit));
                     }
                     Btn("跳過", 130, y + 236, 140, 50, () => { _pickFruit = null; _logStep = 3; Render(); });
                     break;
