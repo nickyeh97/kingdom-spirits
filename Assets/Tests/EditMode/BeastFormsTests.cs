@@ -40,11 +40,12 @@ namespace SpiritBeast.Tests
         }
 
         [Test]
-        public void DemoItems_AreTheSixActiveServiceItems()
+        public void DemoItems_AreTheSevenActiveServiceItems()
         {
+            // 與平台正式資料庫的字典一致（2026-10-30：七項）
             var card = new ServiceCard(Catalog.DemoServiceItems, new ServiceEntry[0]);
-            Assert.That(card.LoggableItems.Count, Is.EqualTo(6));
-            Assert.That(card.LoggableItems[0], Is.EqualTo("收奉獻"));
+            Assert.That(card.LoggableItems.Count, Is.EqualTo(7));
+            Assert.That(card.LoggableItems[0], Is.EqualTo("奉獻服事長"));
         }
 
         [Test]

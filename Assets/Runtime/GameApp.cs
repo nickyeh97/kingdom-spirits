@@ -17,9 +17,12 @@ namespace SpiritBeast.Runtime
 #if UNITY_WEBGL && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")]
         static extern string SB_TakeAuthFragment();
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        static extern void SB_BackToPlatform();
 #else
         // 編輯器 Play 模式：以環境變數 SPIRIT_DEV_FRAGMENT 提供片段（見 docs/DEVELOPMENT.md）
         static string SB_TakeAuthFragment() => Environment.GetEnvironmentVariable("SPIRIT_DEV_FRAGMENT") ?? "";
+        static void SB_BackToPlatform() => Debug.Log("[遊戲] 回到牧區平台（網頁版才會換頁）");
 #endif
 
         enum Page { Loading, Error, FirstMeet, Home, Card, Wardrobe, Log, Celebrate }
@@ -162,8 +165,12 @@ namespace SpiritBeast.Runtime
             _outcome = new LogOutcome(before, _card, _pickItem);
             _celebrateMessage = _encourager.AfterLog(_outcome, _profile.Variant, _pickFruit);
             _invitation = _encourager.Invitation(_card);
-            if (_outcome.Evolved) _beast.Evolve(_profile.Variant, _profile.Palette, _outcome.StageAfter);
-            else _beast.Celebrate();
+            var pal = Catalog.FindPalette(_profile.Palette);
+            var main = PaletteMaterial.Hex(pal.Main); var accent = PaletteMaterial.Hex(pal.Accent);
+            // 星星從靈獸畫面的中間冒出來（慶祝頁的靈獸佔上方 45%）
+            var center = new Vector2(0.5f, 1f - 0.45f * 0.5f);
+            if (_outcome.Evolved) { _beast.Evolve(_profile.Variant, _profile.Palette, _outcome.StageAfter); _fx.Evolve(center, main, accent); }
+            else { _beast.Celebrate(); _fx.LevelUp(center, main, accent); }
             Go(Page.Celebrate);
         }
 
@@ -229,6 +236,7 @@ namespace SpiritBeast.Runtime
         // 狀態一變就整頁重建（Render）：頁面元件少，重建比逐一更新簡單、不會漏改。
 
         RectTransform _column, _root, _ui, _background;
+        Sparkles _fx;
         bool _wasEvolving;
         Vector2Int _screen;
         float _height, _top;
@@ -246,7 +254,11 @@ namespace SpiritBeast.Runtime
         void Render()
         {
             Touched();   // 每次重畫都是因為有操作（或換頁）
-            if (_column == null) _column = UiKit.CreateCanvas("GameUI", out _root);
+            if (_column == null)
+            {
+                _column = UiKit.CreateCanvas("GameUI", out _root);
+                _fx = Sparkles.Create(_root);   // 效果層在介面上面，換頁重建時不動它
+            }
             if (_ui != null) Destroy(_ui.gameObject);
             if (_background != null) Destroy(_background.gameObject);
             _ui = UiKit.Group(_column, "Page");
@@ -288,8 +300,9 @@ namespace SpiritBeast.Runtime
 
         void DrawError()
         {
-            UiKit.Label(_ui, _error, 22, 24, _height / 2 - 80, 352, 100);
-            UiKit.Label(_ui, "可以關掉這個頁面，回到牧區平台再開一次。", 14, 24, _height / 2 + 30, 352, 60);
+            UiKit.Label(_ui, _error, 22, 24, _height / 2 - 110, 352, 100);
+            UiKit.Label(_ui, "回到牧區平台，再點一次「小領袖靈獸」就好。\n靈獸和服事紀錄都好好的，不會不見。", 14, 24, _height / 2, 352, 50);
+            Btn("回到牧區平台", 100, _height / 2 + 70, 200, 56, SB_BackToPlatform, UiKit.Leaf);
         }
 
         void DrawHome()

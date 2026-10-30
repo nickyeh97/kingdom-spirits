@@ -67,8 +67,11 @@ namespace SpiritBeast.Runtime
                 ? name + " 長大了！現在是「" + GrowthRules.StageName(outcome.StageAfter) + "」"
                 : item + " 升到 " + outcome.LevelAfter + " 等！";
             _message = _encourager.AfterLog(outcome, _variant, null);
-            if (outcome.Evolved) _beast.Evolve(_variant, _palette, outcome.StageAfter);
-            else _beast.Celebrate();
+            var pal = Catalog.FindPalette(_palette);
+            var main = PaletteMaterial.Hex(pal.Main); var accent = PaletteMaterial.Hex(pal.Accent);
+            var center = new Vector2(0.5f, 1f - BeastShare * 0.5f);   // 靈獸畫面的中間
+            if (outcome.Evolved) { _beast.Evolve(_variant, _palette, outcome.StageAfter); _fx.Evolve(center, main, accent); }
+            else { _beast.Celebrate(); _fx.LevelUp(center, main, accent); }
         }
 
         // ---- 滑動轉動 ----
@@ -91,6 +94,7 @@ namespace SpiritBeast.Runtime
         // ---- 畫面（UGUI）：以 400 寬的邏輯座標排版（UiKit）----
 
         RectTransform _column, _root, _page, _background;
+        Sparkles _fx;
         bool _wasEvolving;
         Vector2Int _screen;
         float _height;
@@ -107,7 +111,11 @@ namespace SpiritBeast.Runtime
 
         void Render()
         {
-            if (_column == null) _column = UiKit.CreateCanvas("DemoUI", out _root);
+            if (_column == null)
+            {
+                _column = UiKit.CreateCanvas("DemoUI", out _root);
+                _fx = Sparkles.Create(_root);
+            }
             if (_page != null) Destroy(_page.gameObject);
             if (_background != null) Destroy(_background.gameObject);
             _page = UiKit.Group(_column, "Page");
@@ -164,20 +172,20 @@ namespace SpiritBeast.Runtime
                 });
             }
 
-            // 下方：鼓勵話語、六個服事項目（＋1）、還原
-            float y = top + 8;
-            UiKit.Bubble(p, evolving ? "咦？靈獸發光了……" : _headline + "\n" + _message, 16, y, 368, 64, 15);
-            y += 72;
+            // 下方：鼓勵話語、七個服事項目（＋1）、還原——最矮的畫面（下方約 290）也要放得下四排
+            float y = top + 6;
+            UiKit.Bubble(p, evolving ? "咦？靈獸發光了……" : _headline + "\n" + _message, 16, y, 368, 60, 15);
+            y += 66;
             var rows = _card.Rows.Where(row => !row.Retired).ToList();
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
-                UiKit.Button(p, row.Item + "\n" + row.Level + " 等　＋1", 16 + (i % 2) * 188, y + (i / 2) * 50, 180, 44,
+                UiKit.Button(p, row.Item + "\n" + row.Level + " 等　＋1", 16 + (i % 2) * 188, y + (i / 2) * 44, 180, 40,
                     () => { Serve(row.Item); Render(); }, row.Unexplored ? Color.white : UiKit.Leaf, 13,
                     icon: IconPath.Service(row.Item), interactable: !evolving);
             }
-            y += ((rows.Count + 1) / 2) * 50 + 4;
-            UiKit.Button(p, "還原到初始", 120, y, 160, 40, () => { ResetJourney(); Render(); }, interactable: !evolving);
+            y += ((rows.Count + 1) / 2) * 44 + 2;
+            UiKit.Button(p, "還原到初始", 120, y, 160, 34, () => { ResetJourney(); Render(); }, interactable: !evolving);
         }
     }
 }

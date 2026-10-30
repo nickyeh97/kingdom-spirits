@@ -97,17 +97,18 @@ namespace SpiritBeast.Core
         public static Fruit FindFruit(string name) => Fruits.FirstOrDefault(f => f.Name == name);
 
         /// <summary>
-        /// 離線 Demo 用的服事項目（與平台 child_service_items 目前的六項一致）。
+        /// 離線 Demo 用的服事項目（與平台 child_service_items 目前的七項一致，2026-10-30 正式資料庫）。
         /// 正式遊戲一律讀平台的字典，不用這份。
         /// </summary>
         public static readonly IReadOnlyList<ServiceItem> DemoServiceItems = new[]
         {
-            new ServiceItem("收奉獻", 1, true),
-            new ServiceItem("敬拜-司琴", 2, true),
-            new ServiceItem("敬拜-小樂器", 3, true),
-            new ServiceItem("敬拜-Vocal", 4, true),
-            new ServiceItem("領讀天使-宣言/讀經/禱告", 5, true),
-            new ServiceItem("環境稽核", 6, true),
+            new ServiceItem("奉獻服事長", 1, true),
+            new ServiceItem("場地檢核服事長", 2, true),
+            new ServiceItem("領讀服事長", 3, true),
+            new ServiceItem("小秘書服事長", 4, true),
+            new ServiceItem("敬拜-小樂器", 5, true),
+            new ServiceItem("敬拜-司琴", 6, true),
+            new ServiceItem("敬拜-Vocal", 7, true),
         };
 
         /// <summary>
@@ -122,7 +123,9 @@ namespace SpiritBeast.Core
             if (item.Contains("樂器")) return "instrument";
             if (item.Contains("Vocal") || item.Contains("vocal") || item.Contains("唱")) return "vocal";
             if (item.Contains("領讀") || item.Contains("讀經") || item.Contains("禱告") || item.Contains("宣言")) return "reading";
-            if (item.Contains("環境") || item.Contains("整潔") || item.Contains("打掃")) return "tidy";
+            if (item.Contains("環境") || item.Contains("場地") || item.Contains("檢核") || item.Contains("稽核")
+                || item.Contains("整潔") || item.Contains("打掃")) return "tidy";
+            if (item.Contains("秘書") || item.Contains("祕書")) return "secretary";
             return null;
         }
 

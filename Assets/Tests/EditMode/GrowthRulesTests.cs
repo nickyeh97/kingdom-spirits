@@ -73,9 +73,13 @@ namespace SpiritBeast.Tests
         [Test]
         public void Catalog_ServiceIconMatchesPlatformItemsByKeyword()
         {
-            // 平台目前的六項，各對到不同的圖示
+            // 平台目前的七項（2026-10-30），各對到不同的圖示
             var icons = Catalog.DemoServiceItems.Select(i => Catalog.ServiceIcon(i.Name)).ToList();
-            Assert.That(icons, Is.EqualTo(new[] { "offering", "piano", "instrument", "vocal", "reading", "tidy" }));
+            Assert.That(icons, Is.EqualTo(new[] { "offering", "tidy", "reading", "secretary", "instrument", "piano", "vocal" }));
+            // 舊名稱（09 月的六項）也對得到：改名前登錄的紀錄照樣有圖示
+            Assert.That(Catalog.ServiceIcon("收奉獻"), Is.EqualTo("offering"));
+            Assert.That(Catalog.ServiceIcon("環境稽核"), Is.EqualTo("tidy"));
+            Assert.That(Catalog.ServiceIcon("領讀天使-宣言/讀經/禱告"), Is.EqualTo("reading"));
             // 同工改名也對得到；對不到、空白回 null（介面只顯示文字）
             Assert.That(Catalog.ServiceIcon("敬拜-Vocal 主唱"), Is.EqualTo("vocal"));
             Assert.That(Catalog.ServiceIcon("領讀天使-禱告"), Is.EqualTo("reading"));
