@@ -38,6 +38,7 @@ namespace SpiritBeast.Runtime
             _basePitch = Mathf.Asin(offset.y / offset.magnitude) * Mathf.Rad2Deg;
             _distance = offset.magnitude;
             RenderStyle.Init(_camera);
+            BackgroundMusic.Init();
 
             _beast = new GameObject("Beast").AddComponent<BeastView>();
             _encourager = new Encourager(null, _random);
@@ -123,10 +124,11 @@ namespace SpiritBeast.Runtime
             var v = Catalog.FindVariant(_variant);
             var p = _page;
 
-            // 上方：狀態、選靈獸（英文名）、選顏色、渲染模式
+            // 上方：狀態、選靈獸（英文名）、選顏色、渲染模式、音樂開關
             UiKit.Label(p, (v?.DisplayName ?? _variant) + " · " + GrowthRules.StageName(_card.Stage), 20, 0, 4, 400, 30);
             UiKit.Label(p, "服事 " + _card.Total + " 次　·　小領袖靈獸 Demo", 14, 0, 30, 400, 22);
             UiKit.Button(p, "渲染：" + RenderStyle.Label, 296, 4, 100, 26, () => { RenderStyle.Toggle(); Render(); }, size: 12);
+            UiKit.Button(p, BackgroundMusic.Label, 4, 4, 76, 26, () => { BackgroundMusic.Toggle(); Render(); }, size: 12);
             // 點靈獸：跳一下（放在選單按鈕下面，避免擋到按鈕）
             // 動作預覽：有骨架動作的靈獸（目前小獅幼體）才按得動
             var acts = new[] { ("揮手", BeastView.Wave), ("吃果子", BeastView.Eat), ("睡覺", BeastView.Sleep), ("玩球", BeastView.PlayToy) };

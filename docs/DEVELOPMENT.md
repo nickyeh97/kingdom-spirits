@@ -212,6 +212,19 @@ blender -b --python Tools/make_icons.py -- Assets/Resources/Icons
 - 匯入設定由 `Assets/Editor/IconImporter.cs` 自動設好（透明、mipmap、不壓縮）
 - 配色色票不是圖片，是程式依配色資料畫的（`UiKit.Swatch`）
 
+## 背景音樂
+
+`Assets/Resources/Audio/bgm_home.ogg`：原創、程式合成的 lo-fi 背景音樂（72 BPM、F 大調、53 秒無縫循環，沒有版權問題）。
+想改曲子（速度、和弦、旋律）就改 `Tools/make_bgm.py` 開頭的設定再跑一次（需要 numpy＋ffmpeg，Blender 內建的 Python 有 numpy）：
+
+```bash
+<blender>/4.2/python/bin/python3.11 Tools/make_bgm.py Assets/Resources/Audio/bgm_home.ogg
+```
+
+- 播放：`Assets/Runtime/BackgroundMusic.cs`（音量 0.35、循環）；Demo 左上角、靈獸之家右上角有「音樂：開／關」，選擇會記住
+- 匯入設定由 `Assets/Editor/MusicImporter.cs` 自動設好（Vorbis 品質 50%、背景載入）
+- 瀏覽器規定**點過畫面才能出聲**：網頁版打開時是安靜的，第一次點擊之後才開始播（正常）
+
 ## 中文字型
 
 WebGL 沒有系統字型，介面用的是 `Assets/Resources/Fonts/NotoSansTC-Subset.ttf`（程式用到的字＋Big5 常用 5401 字）。
