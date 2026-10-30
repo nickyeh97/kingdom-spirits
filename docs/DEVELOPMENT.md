@@ -85,15 +85,29 @@ dotnet build Tools/EditorCompileCheck
   立刻清掉網址列，再交給 C#（`Assets/Plugins/WebGL/AuthFragment.jslib`）。
 - 壓縮用 Brotli ＋「解壓縮後備」：主機沒設好 `Content-Encoding` 也能開，只是比較慢。
 
-### 本機預覽
+### 本機預覽（VS Code 終端機）
+
+先在 Unity 建置（選單「Spirit Beast/建置 Web（含大小報告）」），再在 VS Code 開 repo 資料夾，
+選單 **Terminal → New Terminal**（或 `` Ctrl+` ``），在 repo 根目錄執行：
 
 ```bash
 npx --yes serve Builds/Web
 ```
 
-直接開 `http://localhost:3000` 會顯示「Fragment: Empty」（正常，沒帶片段）。
-測授權交接可開 `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301`，
-畫面左上應顯示 `Fragment OK child=3f2504e0...`，且網址列的 `#…` 會立刻消失。
+- 第一次會下載 `serve`（需要 Node.js；沒有的話先 `brew install node`）。
+- 終端機會印出兩個網址：**Local**（本機）與 **Network**（同一個 Wi-Fi 的其他裝置，例如 `http://192.168.x.x:3000`）。
+- 要開的網址：
+
+| 網址 | 看到什麼 |
+| --- | --- |
+| `http://localhost:3000/#demo` | **離線 Demo**（選靈獸、配色、服事 ＋1、動作按鈕、滑動轉動） |
+| `http://localhost:3000/` | 正式遊戲：沒有平台帶來的登入資料，停在「請從牧區平台…開啟」（正常） |
+| `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301` | 授權交接測試：網址列的 `#…` 應立刻消失；沒有 Supabase 設定時停在「遊戲設定尚未完成」（正常） |
+
+- **手機測試**：手機連同一個 Wi-Fi，開 Network 網址後面加 `/#demo`。開不起來時，檢查 Mac 的防火牆是否擋住 Node。
+- 右下角的秒數是「這台裝置」的載入時間；本機與區域網路比 4G 快很多，4G 秒數要部署到 Vercel 後再量。
+- `serve` 不會設定 Brotli 的 `Content-Encoding`，所以是靠「解壓縮後備」在瀏覽器解壓，會比正式部署慢一點（正常）。
+- 停止：在終端機按 `Ctrl+C`。改了 Unity 後要**重新建置**，再重新整理網頁（必要時清快取：Shift＋重新整理）。
 
 ## 本機端到端測試（G1 起）
 
