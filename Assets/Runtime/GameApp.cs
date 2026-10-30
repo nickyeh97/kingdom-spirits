@@ -69,6 +69,7 @@ namespace SpiritBeast.Runtime
         void Start()
         {
             SetupCamera();
+            BackgroundMusic.Init();
             _beast = new GameObject("Beast").AddComponent<BeastView>();
             Render();   // 「靈獸準備中…」
 
@@ -296,6 +297,7 @@ namespace SpiritBeast.Runtime
             var v = Catalog.FindVariant(_profile.Variant);
             UiKit.Label(_ui, (v != null ? v.DisplayName : _profile.Variant) + " · " + GrowthRules.StageName(_card.Stage), 22, 0, 8, 400, 34);
             UiKit.Label(_ui, _childName + " 的靈獸", 14, 0, 40, 400, 24);
+            Btn(BackgroundMusic.Label, 316, 8, 76, 26, () => { BackgroundMusic.Toggle(); Render(); }, size: 12);   // 聚會現場可以關掉
             // 點靈獸：跳一下（沒有其他玩法）
             UiKit.Hotspot(_ui, 0, 64, 400, _top - 70, () => { Touched(); _beast.Hop(); });   // 睡著時點一下＝醒來
 
