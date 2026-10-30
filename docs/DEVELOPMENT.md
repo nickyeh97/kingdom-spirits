@@ -110,6 +110,11 @@ npx --yes serve Builds/Web
 - **手機測試**：手機連同一個 Wi-Fi，開 Network 網址後面加 `/#demo`。開不起來時，檢查 Mac 的防火牆是否擋住 Node。
 - 右下角的秒數是「這台裝置」的載入時間；本機與區域網路比 4G 快很多，4G 秒數要部署到 Vercel 後再量。
 - `serve` 不會設定 Brotli 的 `Content-Encoding`，所以是靠「解壓縮後備」在瀏覽器解壓，會比正式部署慢一點（正常）。
+- **Chrome Console 裡可以忽略的訊息**：
+  - `ERROR: Shader Hidden/CoreSRP/CoreCopy`、`Hidden/Universal Render Pipeline/StencilDitherMaskSeed`、`Hidden/Universal/HDRDebugView`
+    「not supported on this GPU」：URP 內建的隱藏著色器需要 WebGL 2 沒有的功能，我們沒用到，畫面不受影響（Unity 6＋URP 的 Web 建置都會出現）
+  - `WebGL: INVALID_ENUM: getInternalformatParameter`：Unity 啟動時偵測瀏覽器支援的格式
+  - 真正要注意的是 `SpiritBeast/PaletteMask` 相關的錯誤，或畫面出現粉紅色
 - 停止：在終端機按 `Ctrl+C`。改了 Unity 後要**重新建置**，再重新整理網頁（必要時清快取：Shift＋重新整理）。
 
 ## 本機端到端測試（G1 起）

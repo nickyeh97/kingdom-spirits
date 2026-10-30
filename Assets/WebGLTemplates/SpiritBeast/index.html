@@ -37,7 +37,9 @@
       companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
       productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
       productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
-      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      // PlayerPrefs（記住渲染模式）存在瀏覽器的 IndexedDB：讓 Unity 自動同步，不用舊的手動同步（Console 的棄用警告）
+      autoSyncPersistentDataPath: true
     }, function (progress) {
       document.querySelector('#fill').style.width = (100 * progress) + '%';
     }).then(function () {
