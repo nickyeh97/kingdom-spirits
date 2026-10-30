@@ -31,7 +31,8 @@
 
 ## Supabase 設定（一次性）
 
-遊戲直接讀寫牧區平台的 Supabase。把平台 `.env.local` 的兩個值填進 `Assets/Resources/supabase.json` 並 commit：
+遊戲直接讀寫牧區平台的 Supabase。`Assets/Resources/supabase.json` **已填入正式專案的公開值**（2026-10-30）；
+換專案時把平台 `.env.local` 的兩個值填進去並 commit：
 
 ```json
 {
@@ -42,7 +43,8 @@
 
 - 兩個都是公開值（平台網頁本來就帶著它們），安全邊界是資料庫 RLS；**不要**放 service role key。
 - 檔案還是範本值時，遊戲會顯示「遊戲設定尚未完成」。
-- 資料表與 RLS 由平台 repo 的 migration `2026-10-02_service_card.sql` 建立，要先在 Supabase 執行。
+- 資料表與 RLS 由平台 repo 的 migration `2026-10-02_service_card.sql` 建立，要先在 Supabase 執行
+  （平台端要做的事整理在平台 repo 的 `docs/SPIRIT_BEAST_OPS.md`，一頁看完）。
 
 ## 測試
 
@@ -123,10 +125,12 @@ npx --yes serve Builds/Web
 
 1. 平台 repo 的 `.env.local` 加一行 `VITE_SPIRIT_GAME_URL=http://localhost:3000`，執行 `npm run dev`。
 2. 本 repo 建置 Web 後執行 `npx --yes serve Builds/Web`（預設 3000 埠）。
-3. 用**已審核、綁定兒童班或幼童班孩子**的家長帳號登入平台 →「我的 → 小領袖靈獸」→ 會跳到遊戲。
+3. 用**已審核、綁定兒童班孩子**的家長帳號登入平台（幼童班暫不開放，2026-10-03） →「我的 → 小領袖靈獸」→ 會跳到遊戲。
 4. 驗收：第一次相遇選靈獸 → 主畫面 → ＋1 服事（家長確認 → 項目 → 果子 → 儲存）→ 慶祝畫面；
    第 4 次服事時會進化。回平台再開一次，紀錄與外觀都還在。
 5. RLS 驗收：把網址片段的 `child=` 換成別人孩子的 id，應顯示「找不到這位孩子的資料」。
+6. 錯誤畫面：等 access token 過期（約 1 小時）再按＋1，應顯示「登入已逾時」；
+   錯誤頁的「回到牧區平台」會回到平台的上一頁，再點一次「小領袖靈獸」即可。
 
 ### 編輯器 Play 模式
 
@@ -201,10 +205,11 @@ python3 Tools/fbx_mask_report.py Assets/Art/Models/*.fbx
 
 ## 介面圖示
 
-六項服事、九顆聖靈果子的圖示在 `Assets/Resources/Icons/`（128×128、透明背景），用 Blender 腳本畫出來：
+七項服事、九顆聖靈果子的圖示在 `Assets/Resources/Icons/`（128×128、透明背景），用 Blender 腳本畫出來：
 
 ```bash
 blender -b --python Tools/make_icons.py -- Assets/Resources/Icons
+blender -b --python Tools/make_icons.py -- Assets/Resources/Icons secretary   # 只重畫指定的圖示
 ```
 
 - 檔名對照在 `Assets/Core/Catalog.cs`：果子用 `Fruit.Icon`（英文），服事項目用 `ServiceIcon()` 依**關鍵字**比對

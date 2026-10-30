@@ -1,6 +1,7 @@
-# 介面圖示：六項服事＋九顆聖靈果子，2D 扁平風（GDD §7.2「圖示」）
+# 介面圖示：七項服事＋九顆聖靈果子，2D 扁平風（GDD §7.2「圖示」）
 # 用法（repo 根目錄）：
 #   blender -b --python Tools/make_icons.py -- Assets/Resources/Icons
+#   blender -b --python Tools/make_icons.py -- Assets/Resources/Icons secretary   # 只畫指定的圖示（其他不動）
 # 輸出：<資料夾>/Service/<key>.png、<資料夾>/Fruits/<key>.png，128×128、透明背景。
 # 檔名對照在 Assets/Core/Catalog.cs（ServiceIcon、Fruit.Icon），有測試。
 #
@@ -13,6 +14,7 @@ import bpy, sys, os, math
 from mathutils import Vector
 
 OUT = sys.argv[sys.argv.index("--") + 1]
+ONLY = set(sys.argv[sys.argv.index("--") + 2:])
 SIZE = 128
 INK = "#3D2B1F"
 
@@ -226,6 +228,22 @@ def tidy():
         poly("Sparkle", [(0, s), (s * 0.25, s * 0.25), (s, 0), (s * 0.25, -s * 0.25), (0, -s),
                          (-s * 0.25, -s * 0.25), (-s, 0), (-s * 0.25, s * 0.25)], "#7FB6E8", 0.02, 0, (x, y))
 
+def secretary():
+    # 小秘書：夾板＋打勾的清單＋鉛筆（2026-10-30 平台新增「小秘書服事長」）
+    rect("Board", -0.1, -0.08, 1.35, 1.75, "#B9824F", 0, r=0.12)
+    rect("Paper", -0.1, -0.15, 1.1, 1.45, "#FFFDF6", 0.01, r=0.05)
+    rect("Clip", -0.1, 0.72, 0.6, 0.26, "#9AA6B2", 0.02, r=0.08)
+    for k in range(3):
+        y = 0.3 - 0.38 * k
+        stroke("Check", [(-0.5, y), (-0.4, y - 0.1), (-0.24, y + 0.1)], 0.07, "#6BAE4F", 0.02)
+        stroke("Line", [(-0.1, y), (0.32, y)], 0.07, "#C9B79C", 0.02)
+    a = math.radians(-35)                                   # 鉛筆斜放在右下角
+    def P(x, y): return (0.62 + x * math.cos(a) - y * math.sin(a), -0.35 + x * math.sin(a) + y * math.cos(a))
+    poly("Pencil", [P(-0.12, 0.55), P(0.12, 0.55), P(0.12, -0.35), P(-0.12, -0.35)], "#F2C14E", 0.03)
+    poly("Tip", [P(-0.12, -0.35), P(0.12, -0.35), P(0, -0.6)], "#F5D9B0", 0.03)
+    poly("Lead", [P(-0.04, -0.52), P(0.04, -0.52), P(0, -0.6)], "#3D2B1F", 0.04)
+    poly("Eraser", [P(-0.12, 0.55), P(0.12, 0.55), P(0.12, 0.72), P(-0.12, 0.72)], "#E88A9A", 0.03)
+
 # ================= 果子（加拉太書 5:22–23）=================
 
 def stem_leaf(x, y, rot=-30, color="#6BAE4F"):
@@ -304,13 +322,15 @@ def selfcontrol():  # 節制：無花果（聖經裡的果子，水滴形）
 
 ICONS = {
     "Service": {"offering": offering, "piano": piano, "instrument": instrument,
-                "vocal": vocal, "reading": reading, "tidy": tidy},
+                "vocal": vocal, "reading": reading, "tidy": tidy, "secretary": secretary},
     "Fruits": {"love": love, "joy": joy, "peace": peace, "patience": patience, "kindness": kindness,
                "goodness": goodness, "faithfulness": faithfulness, "gentleness": gentleness,
                "selfcontrol": selfcontrol},
 }
 for folder, icons in ICONS.items():
     for key, draw in icons.items():
+        if ONLY and key not in ONLY:
+            continue
         clear()
         draw()
         save(folder, key)
