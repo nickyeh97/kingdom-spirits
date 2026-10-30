@@ -18,7 +18,16 @@
 
 2. 用 Unity Hub 或 Unity CLI 開啟本專案資料夾。第一次開啟會產生 `Library/`（不進版控）、
    各檔案的 `.meta` 與 `ProjectSettings/*.asset`——**這些要 commit**（`.meta` 記錄資產 GUID，漏了會讓引用斷掉）。
-3. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
+3. **渲染管線用 URP**（`com.unity.render-pipelines.universal`，已列在 `Packages/manifest.json`）。
+   第一次開專案時 `Assets/Editor/RenderPipelineSetup.cs` 會自動建立 `Assets/Settings/SpiritBeast_URP.asset`
+   （含 Renderer，關 HDR、關陰影）並設成預設管線；也可以手動按選單「**Spirit Beast/設定 URP（卡通著色器）**」。
+   產生的 `Assets/Settings/*` 與 `ProjectSettings/GraphicsSettings.asset` 的變更**要 commit**。
+   畫面全粉紅＝管線沒設好（著色器只在 URP 下運作），按一次上面的選單即可；命令列建置會自動先檢查。
+   URP 的 Renderer **不帶後製資料**（Post-processing 關閉）：沒用到後製，省下打包大小；之後若要加後製再打開。
+   **輸入系統用舊版 Input Manager**（Project Settings → Player → Active Input Handling＝Input Manager (Old)）：
+   介面是 IMGUI，手機的觸控要靠舊版 Input Manager 轉成滑鼠點擊；設成新版 Input System 時手機按鈕會全部沒反應
+   （2026-10-29 實機遇到）。改成 UGUI 時再一起評估是否換新版。
+4. 純 C# 核心測試需要 [.NET 8 SDK](https://dotnet.microsoft.com/download)（`brew install dotnet@8` 亦可）。
 
 ## Supabase 設定（一次性）
 
@@ -42,7 +51,10 @@
 dotnet test Tools/CoreTests
 
 # Runtime 編譯檢查：用 NuGet 的 UnityEngine 參考組件編譯 Core＋Runtime（不需要 Unity 授權）
+#   UGUI 是套件、不在 NuGet 的模組裡：Tools/UguiReference 會從 Unity 套件庫下載 com.unity.ugui 原始碼編出參考組件（要網路）
 dotnet build Tools/RuntimeCompileCheck
+# Editor 腳本（Assets/Editor）編譯檢查：Editor 腳本編譯失敗，Unity 開專案會進 Safe Mode
+dotnet build Tools/EditorCompileCheck
 
 # 同一批測試在 Unity 裡跑（EditMode）
 "$UNITY" -batchmode -nographics -projectPath . \
@@ -58,25 +70,52 @@ dotnet build Tools/RuntimeCompileCheck
 
 ## 建置 Web
 
+編輯器裡：選單「**Spirit Beast/建置 Web（含大小報告）**」（第一次會切換到 Web 平台，要等一下）。命令列：
+
 ```bash
 "$UNITY" -batchmode -nographics -quit -projectPath . \
   -executeMethod SpiritBeast.Editor.Build.Web -logFile -
 ```
 
 - 輸出在 `Builds/Web/`（不進版控）。建置腳本：`Assets/Editor/Build.cs`。
+- **大小檢查**：建完寫出 `Builds/Web-size-report.txt`（不進版控、不會被部署），列出
+  ①實際要下載的檔案（Brotli 壓縮後，和預算比的是這個）②打包的素材前 40 大（壓縮前，用來找誰最大）。
+  預算是壓縮後 **30 MB**（GDD §7.3）；超過時命令列以錯誤碼結束、編輯器跳出提示。
 - 網頁模板：`Assets/WebGLTemplates/SpiritBeast/index.html`。它負責讀取平台帶來的授權片段（`#at=…&child=…`）、
   立刻清掉網址列，再交給 C#（`Assets/Plugins/WebGL/AuthFragment.jslib`）。
 - 壓縮用 Brotli ＋「解壓縮後備」：主機沒設好 `Content-Encoding` 也能開，只是比較慢。
 
-### 本機預覽
+### 本機預覽（VS Code 終端機）
+
+先在 Unity 建置（選單「Spirit Beast/建置 Web（含大小報告）」），再在 VS Code 開 repo 資料夾，
+選單 **Terminal → New Terminal**（或 `` Ctrl+` ``），在 repo 根目錄執行：
 
 ```bash
 npx --yes serve Builds/Web
 ```
 
-直接開 `http://localhost:3000` 會顯示「Fragment: Empty」（正常，沒帶片段）。
-測授權交接可開 `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301`，
-畫面左上應顯示 `Fragment OK child=3f2504e0...`，且網址列的 `#…` 會立刻消失。
+- 第一次會下載 `serve`（需要 Node.js；沒有的話先 `brew install node`）。
+- 終端機會印出兩個網址：**Local**（本機）與 **Network**（同一個 Wi-Fi 的其他裝置，例如 `http://192.168.x.x:3000`）。
+- 要開的網址：
+
+| 網址 | 看到什麼 |
+| --- | --- |
+| `http://localhost:3000/#demo` | **離線 Demo**（選靈獸、配色、服事 ＋1、動作按鈕、滑動轉動） |
+| `http://localhost:3000/` | 正式遊戲：沒有平台帶來的登入資料，停在「請從牧區平台…開啟」（正常） |
+| `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301` | 授權交接測試：網址列的 `#…` 應立刻消失；沒有 Supabase 設定時停在「遊戲設定尚未完成」（正常） |
+
+- **`#demo` 要在開網頁時就帶著**：網頁已經開著才在網址列補 `#demo`，瀏覽器不會重新載入（舊版會停在正式遊戲的畫面，
+  按一次重新整理就好；2026-10-30 起模板偵測到 `#…` 改變會自動重新載入）。
+- Unity 的「Build And Run」也會開一個本機伺服器（隨機埠號，例如 `localhost:63631`），一樣在網址後面加 `/#demo`。
+- **手機測試**：手機連同一個 Wi-Fi，開 Network 網址後面加 `/#demo`。開不起來時，檢查 Mac 的防火牆是否擋住 Node。
+- 右下角的秒數是「這台裝置」的載入時間；本機與區域網路比 4G 快很多，4G 秒數要部署到 Vercel 後再量。
+- `serve` 不會設定 Brotli 的 `Content-Encoding`，所以是靠「解壓縮後備」在瀏覽器解壓，會比正式部署慢一點（正常）。
+- **Chrome Console 裡可以忽略的訊息**：
+  - `ERROR: Shader Hidden/CoreSRP/CoreCopy`、`Hidden/Universal Render Pipeline/StencilDitherMaskSeed`、`Hidden/Universal/HDRDebugView`
+    「not supported on this GPU」：URP 內建的隱藏著色器需要 WebGL 2 沒有的功能，我們沒用到，畫面不受影響（Unity 6＋URP 的 Web 建置都會出現）
+  - `WebGL: INVALID_ENUM: getInternalformatParameter`：Unity 啟動時偵測瀏覽器支援的格式
+  - 真正要注意的是 `SpiritBeast/PaletteMask` 相關的錯誤，或畫面出現粉紅色
+- 停止：在終端機按 `Ctrl+C`。改了 Unity 後要**重新建置**，再重新整理網頁（必要時清快取：Shift＋重新整理）。
 
 ## 本機端到端測試（G1 起）
 
@@ -104,9 +143,15 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 第 4、12、24 次服事各進化一次（初生 → 成長 → 茁壯 → 小領袖）；「還原到初始」回到 0 次
 - 靈獸模型放在任一 `Resources` 資料夾的 `Beasts/` 底下，檔名「英文名_形態」：
   `Lamb_Baby.fbx`（階段 1–2）、`Lamb_Adult.fbx`（階段 3）、`Lamb_Leader.fbx`（階段 4）。
-  位置 `Assets/Art/Resources/Beasts/`；找不到模型的變體（目前 Dove）會用幾何體占位；目前已有 Lamb、Lion 各三顆
+  位置 `Assets/Art/Resources/Beasts/`；找不到模型的形態會用幾何體占位；目前 Lamb、Lion、Dove 各三顆都已就位
 - **花紋貼圖**（選用）：同資料夾放「模型名_Pattern.png」（例如 `Lion_Baby_Pattern.png`），會自動乘在色槽顏色上；
-  灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白
+  灰階、sRGB（Unity 預設匯入設定即可），沒有就當作全白；顯示強度依階段（`BeastForms.PatternStrength`：從階段 2 開始，小獅從初生）
+
+- **Demo 動作按鈕**：揮手、吃果子、睡覺、玩球（只有有骨架動作的靈獸按得動，目前是小獅幼體）；開 Demo 時先揮手打招呼
+- **正式遊戲**：每次打開遊戲第一次回到靈獸之家時揮手；選果子時吃果子；靈獸之家 6 秒沒操作玩一次球、15 秒睡著，點一下醒來
+- **文字不超框**：所有介面文字放不下就自動縮小字體（最小到一半，`UiKit.Label`）
+- **Demo 操作**：點靈獸＝跳一下；**左右滑動**＝水平轉動靈獸（看每個角度，換靈獸／配色時保留角度）；
+  **上下滑動**＝鏡頭繞著靈獸上下轉，以開場角度為中心上下各 30°（`DemoApp.Orbit`，滑鼠拖曳也可以）
 
 ## 美術檢查：配色預覽
 
@@ -118,8 +163,32 @@ Local Storage 中 `sb-…-auth-token` 的 `access_token` 取得，約 1 小時�
 - 從 Blender 重新匯出、Unity 重新匯入後，按「**重新載入**」就能看到新版，不必停 Play
 - 「顯示：…」切換診斷模式：遮罩顏色（頂點色原值）、遮罩A（白＝可換色）、不打光
 - 左上列出**規格檢查**（三角形、材質數、頂點色遮罩、尺寸、原點），同時印在 Console
-- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`，公式與 Blender 預覽材質相同
+- 「**錄影模式**」：隱藏所有按鈕與規格檢查，只留模型和每隻下方的配色名稱，方便錄影給大家看；
+  **點畫面任一處或按 H** 回到一般畫面（Game 視窗要先點一下取得焦點，H 才有反應）。
+  錄影方式：macOS 按 `⌘⇧5` 選「錄製選取的部分」框住 Game 視窗；或安裝 Unity Recorder 套件
+  （Package Manager → Unity Registry → Recorder，Window → General → Recorder）直接輸出固定解析度的 MP4
+- 換色用的著色器是 `Assets/Resources/Shaders/PaletteMask.shader`（URP），公式與 Blender 預覽材質相同；
+  加上兩段卡通明暗（暗面是暖色、不會全黑）與反向外殼描邊。材質上可調：
+  `_ShadowTint`／`_ShadowThreshold`／`_ShadowSoftness`（暗面顏色、明暗交界位置與柔和度）、
+  `_OutlineColor`／`_OutlineWidth`（描邊顏色與粗細，以螢幕高度比例計，遠近一致）；診斷模式下不畫描邊
+- 描邊在零件交界處斷開或有缺口時，代表那裡是硬邊（法線不連續）：在 Blender 對該處做平滑法線，
+  或改用平滑過的描邊法線（G2 待觀察，有需要再做）
 - 規則在 `Assets/Core/ModelSpec.cs`（有測試）；這個場景不會啟動遊戲本體
+
+### 渲染模式：卡通／Blender 預覽
+
+配色預覽與離線 Demo 都有「**渲染：…**」按鈕，可以手動切換（記在 PlayerPrefs，下次開啟維持；正式遊戲固定用卡通）：
+
+- **卡通**：遊戲正式畫面——兩段明暗＋描邊，用場景原本的燈光與奶油色背景
+- **Blender 預覽**：跟美術檢查用的 Cycles 預覽圖（`docs/art-worklog/` 的圖）一致，方便對照「Blender 裡看到的」和「Unity 裡看到的」：
+  - 燈光、環境光、背景、色調都換成算圖的設定：太陽強度 3／π、白光、同一個方向，太陽會投影；
+    環境光＝Blender 世界顏色 (0.55, 0.60, 0.65) × 0.6；灰色背景；不畫描邊
+  - 色調用 Blender 的 **AgX**：`Assets/Resources/Shaders/AgX_Lut.png` 是用 Blender 4.2 Cycles 實際算出來的查找表
+    （`Tools/bake_agx_lut.py`，跟 Cycles 直接輸出逐值比對相同）；匯入設定由 `AgxLutImporter` 自動設好（關 sRGB、不壓縮）
+  - **仍會有的差異**：Cycles 有反彈光與環境遮蔽（頭下、腿間比較暗），Unity 的環境光是均勻的，這些凹處會稍亮；
+    相機鏡頭不同（Blender 60mm），構圖不會一樣
+  - 算圖腳本 `Tools/render_preview.py` 是基準：改了它的燈光／世界設定，`Assets/Runtime/RenderStyle.cs` 的常數也要一起改
+- 對照時建議在配色預覽按「停止轉動」，並選單看一組配色（雲朵＝算圖用的 p8）
 
 **模型在預覽裡全黑或顏色怪**：用 FBX 檢查工具直接讀檔（不用開 Unity 或 Blender，Mac 內建 python3 即可）：
 
@@ -129,6 +198,19 @@ python3 Tools/fbx_mask_report.py Assets/Art/Models/*.fbx
 
 它會列出每個網格有哪些頂點色層、**Unity 實際讀的是哪一層**（只讀第一層），以及主色／副色／點綴／固定色的數量；
 「色槽全 0」＝換色後全黑，「多槽混合」＝多半是白色預設值而非 Mask。
+
+## 介面圖示
+
+六項服事、九顆聖靈果子的圖示在 `Assets/Resources/Icons/`（128×128、透明背景），用 Blender 腳本畫出來：
+
+```bash
+blender -b --python Tools/make_icons.py -- Assets/Resources/Icons
+```
+
+- 檔名對照在 `Assets/Core/Catalog.cs`：果子用 `Fruit.Icon`（英文），服事項目用 `ServiceIcon()` 依**關鍵字**比對
+  （平台改名也對得到；新增項目對不到時按鈕只顯示文字，要在 `ServiceIcon()` 補關鍵字並畫新圖示）
+- 匯入設定由 `Assets/Editor/IconImporter.cs` 自動設好（透明、mipmap、不壓縮）
+- 配色色票不是圖片，是程式依配色資料畫的（`UiKit.Swatch`）
 
 ## 中文字型
 

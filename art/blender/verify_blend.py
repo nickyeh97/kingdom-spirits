@@ -65,6 +65,12 @@ for o in meshes:
     bm.free()
     check(f"{o.name}: normals face outward (no inside-out parts)", inside_out == 0, f"{inside_out} of {len(vol)} closed parts inside out")
     check(f"{o.name}: colour mask attribute", "Mask" in me.color_attributes, ", ".join(a.name for a in me.color_attributes))
+    if o.parent is None:
+        # 原點在腳底中央（ART_PROFILE）：引擎把模型放在原點，原點不對整隻會浮起來或沉下去（Dove_Baby v001 的錯）
+        min_z = min((o.matrix_world @ v.co).z for v in me.vertices) if me.vertices else 0.0
+        check(f"{o.name}: origin at feet centre (0, 0, 0), lowest point near Z = 0",
+              o.location.length < 1e-4 and abs(min_z) < 0.02,
+              f"location {tuple(round(c, 4) for c in o.location)}, lowest Z {min_z:.4f}")
     sx, sy, sz = o.scale
     check(f"{o.name}: scale applied", abs(sx - 1) < 1e-4 and abs(sy - 1) < 1e-4 and abs(sz - 1) < 1e-4, f"scale {tuple(round(v, 4) for v in o.scale)}")
     check(f"{o.name}: selectable (R06)", not o.hide_select, f"hide_select={o.hide_select}")

@@ -23,6 +23,8 @@
     // 先暫存給 C# 取走，並立刻清掉網址列，避免 token 留在瀏覽紀錄或被複製分享
     window.__sbAuthFragment = location.hash.slice(1);
     if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    // 遊戲已經載入後才在網址列改 #…（例如補上 #demo）：瀏覽器不會重新載入，遊戲讀不到新的片段 → 自動重新載入
+    window.addEventListener('hashchange', function () { location.reload(); });
     var loadStart = performance.now();
   </script>
   <script src="Build/{{{ LOADER_FILENAME }}}"></script>
@@ -35,7 +37,9 @@
       companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
       productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
       productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
-      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      // PlayerPrefs（記住渲染模式）存在瀏覽器的 IndexedDB：讓 Unity 自動同步，不用舊的手動同步（Console 的棄用警告）
+      autoSyncPersistentDataPath: true
     }, function (progress) {
       document.querySelector('#fill').style.width = (100 * progress) + '%';
     }).then(function () {

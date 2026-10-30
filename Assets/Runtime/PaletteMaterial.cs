@@ -7,20 +7,36 @@ namespace SpiritBeast.Runtime
     /// <summary>
     /// 依配色建立換色材質（著色器 SpiritBeast/PaletteMask，讀頂點色遮罩 Mask）並套到整個模型。
     /// 模型若有花紋貼圖（Resources 裡同名的「模型名_Pattern」），一起設上。
+    /// 占位幾何體用 Flat：同一個著色器的純色模式（不讀遮罩），明暗與描邊和正式模型一致。
     /// </summary>
     public static class PaletteMaterial
     {
         static Shader _shader;
 
-        public static Material Create(Palette p, Texture pattern = null)
+        static Shader FindShader()
         {
             if (_shader == null) _shader = Shader.Find("SpiritBeast/PaletteMask");
-            if (_shader == null) return null;
+            return _shader;
+        }
+
+        public static Material Create(Palette p, Texture pattern = null)
+        {
+            if (FindShader() == null) return null;
             var mat = new Material(_shader) { name = "Palette_" + p.Id };
             mat.SetColor("_Primary", Hex(p.Main));
             mat.SetColor("_Secondary", Hex(p.Secondary));
             mat.SetColor("_Accent", Hex(p.Accent));
             if (pattern != null) mat.SetTexture("_Pattern", pattern);
+            return mat;
+        }
+
+        /// <summary>純色材質（_UseMask = 0，顏色取 _BaseColor）；呼叫端負責 Destroy</summary>
+        public static Material Flat(Color color)
+        {
+            if (FindShader() == null) return null;
+            var mat = new Material(_shader) { name = "Flat_" + ColorUtility.ToHtmlStringRGB(color) };
+            mat.SetFloat("_UseMask", 0f);
+            mat.SetColor("_BaseColor", color);
             return mat;
         }
 

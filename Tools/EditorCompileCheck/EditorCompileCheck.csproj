@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Editor 腳本（Assets/Editor）的編譯檢查：用 NuGet 上的 UnityEditor 參考組件（Unity3D.SDK 2021.1）編譯，不需要 Unity。
+    為什麼要有：Editor 腳本編譯失敗時 Unity 會進 Safe Mode、整個專案打不開（2026-10-29 實際發生：
+    delayCall 接了有回傳值的方法）。抓得到型別、委派、參數錯誤；抓不到 Unity 6 才有的新 API。
+    RenderPipelineSetup.cs 用到 URP 的型別（沒有參考組件），以 Stubs.cs 代替，不在檢查範圍內。
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Editor/**/*.cs" Exclude="../../Assets/Editor/RenderPipelineSetup.cs" />
+    <Compile Include="Stubs.cs" />
+    <ProjectReference Include="../RuntimeCompileCheck/RuntimeCompileCheck.csproj" />
+    <PackageReference Include="Unity3D.SDK" Version="2021.1.14.1" ExcludeAssets="compile" GeneratePathProperty="true" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" ExcludeAssets="compile" GeneratePathProperty="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(PkgUnity3D_SDK)/lib/UnityEditor.dll" />
+    <Reference Include="$(PkgUnityEngine_Modules)/lib/net45/*.dll" />
+  </ItemGroup>
+</Project>

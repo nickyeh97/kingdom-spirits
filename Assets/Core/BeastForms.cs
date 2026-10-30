@@ -13,5 +13,17 @@ namespace SpiritBeast.Core
 
         /// <summary>同一個網格內用縮放區分階段：只有階段 2（成長）比初生大一點</summary>
         public static float Scale(int stage) => stage == 2 ? 1.12f : 1f;
+
+        /// <summary>
+        /// 花紋貼圖的顯示強度（著色器 _PatternStrength：0＝不顯示、1＝完整）。
+        /// GDD §7.2：花紋從階段 2 開始出現；幼體網格是階段 1–2 共用的，所以要靠這個開關區分。
+        /// 例外：小獅的自然毛色從初生就有（組長 2026-10-12 決定，見 art/briefs/Lion_Baby.md）。
+        /// 沒有花紋貼圖的模型（例如小羊）不受影響。
+        /// </summary>
+        public static float PatternStrength(string variantId, int stage)
+        {
+            int from = variantId == "lion" ? 1 : 2;
+            return stage >= from ? 1f : 0f;
+        }
     }
 }

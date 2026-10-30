@@ -13,7 +13,6 @@ namespace SpiritBeast.Runtime
         static readonly float[] StageScale = { 0.75f, 0.9f, 1.05f, 1.2f };
 
         Transform _body;
-        Shader _shader;
         float _hopTime = -1f;
         float _spinTime = -1f;
         float _evolveTime = -1f;
@@ -22,13 +21,24 @@ namespace SpiritBeast.Runtime
 
         public bool Evolving => _evolveTime >= 0f;
 
-        void Awake()
-        {
-            _shader = Shader.Find("Legacy Shaders/Diffuse");
-            if (_shader == null) _shader = Shader.Find("Sprites/Default");
-        }
+        /// <summary>使用者轉動的角度（度，水平方向）：Demo 左右滑動時改它，換靈獸、換配色都保留</summary>
+        public float Yaw;
 
         Material _modelMaterial;
+        // 有骨架動作的模型（FBX 以 Legacy 動畫匯入）：用名稱播放；沒有動作的模型用下面的程式動作（跳、轉圈）
+        Animation _anim;
+        readonly Dictionary<string, string> _clips = new Dictionary<string, string>();   // 動作名（Idle…）→ Unity 裡的名稱（Rig|Idle）
+        static readonly HashSet<string> Looping = new HashSet<string> { "Idle", "Sleep" };
+        string _current;
+
+        /// <summary>動作名稱（Blender 的 Action 名）：待機、開心、揮手、吃果子、睡覺、玩玩具</summary>
+        public const string Idle = "Idle", Happy = "Happy", Wave = "Wave", Eat = "Eat", Sleep = "Sleep", PlayToy = "Play";
+        const string Blink = "Blink";
+        const int BlinkLayer = 10;                 // 疊在所有動作上面
+        float _nextBlink;
+
+        public bool Has(string clip) => _anim != null && _clips.ContainsKey(clip);
+        public bool Sleeping => _anim != null && _current == Sleep;
 
         public void Show(string variant, string palette, int stage)
         {
@@ -46,18 +56,71 @@ namespace SpiritBeast.Runtime
                 go.transform.localPosition = Vector3.zero;
                 go.transform.localRotation = Quaternion.identity;
                 _modelMaterial = PaletteMaterial.Apply(go, Catalog.FindPalette(palette), PaletteMaterial.FindPattern(model.name));
+                if (_modelMaterial != null) _modelMaterial.SetFloat("_PatternStrength", BeastForms.PatternStrength(variant, stage));
                 _body.localScale = Vector3.one * BeastForms.Scale(stage);
+                SetupAnimation(go);
             }
             else
             {
+                _anim = null;
                 Build(variant, Catalog.FindPalette(palette), stage);
                 _body.localScale = Vector3.one * StageScale[stage - 1];
             }
         }
 
-        public void Hop() => _hopTime = 0f;
+        public void Hop()
+        {
+            if (!Play(Happy)) _hopTime = 0f;   // 睡著時點一下也是播 Happy＝醒過來
+        }
 
-        public void Celebrate() { _hopTime = 0f; _spinTime = 0f; }
+        public void Celebrate()
+        {
+            if (!Play(Happy)) _hopTime = 0f;
+            _spinTime = 0f;
+        }
+
+        /// <summary>
+        /// 播一個動作：循環的（待機、睡覺）一直播到下一個動作；其他的播完自動回到待機。
+        /// 模型沒有這個動作時回傳 false（呼叫端可以改用程式動作或什麼都不做）。
+        /// </summary>
+        public bool Play(string clip)
+        {
+            if (!Has(clip) || Evolving) return false;
+            _anim.CrossFade(_clips[clip], 0.15f);
+            if (!Looping.Contains(clip)) _anim.CrossFadeQueued(_clips[Idle], 0.2f);
+            _current = clip;
+            return true;
+        }
+
+        /// <summary>
+        /// 找出模型裡的動作（Blender 的 Action 匯出成 FBX 後叫「Rig|Idle」這種名字，所以比對「|」後面）並開始待機循環
+        /// </summary>
+        void SetupAnimation(GameObject go)
+        {
+            _anim = go.GetComponentInChildren<Animation>();
+            _clips.Clear();
+            _current = null;
+            if (_anim == null) return;
+            foreach (AnimationState st in _anim)
+            {
+                var n = st.name.Substring(st.name.LastIndexOf('|') + 1);
+                _clips[n] = st.name;
+                st.wrapMode = Looping.Contains(n) ? WrapMode.Loop : WrapMode.Once;
+                if (n == Blink)
+                {
+                    // 眨眼只影響眼睛的骨頭（eye.L/R、lid.L/R），放在高圖層 → 其他骨頭照常播底下的動作
+                    st.layer = BlinkLayer;
+                    st.blendMode = AnimationBlendMode.Blend;
+                    foreach (var t in go.GetComponentsInChildren<Transform>())
+                        if (t.name.StartsWith("eye.") || t.name.StartsWith("lid."))
+                            st.AddMixingTransform(t, false);
+                }
+            }
+            _nextBlink = Time.time + Random.Range(1.5f, 3f);
+            if (!_clips.ContainsKey(Idle)) { _anim = null; _clips.Clear(); return; }
+            _anim.Play(_clips[Idle]);
+            _current = Idle;
+        }
 
         /// <summary>進化過場：先放大發光，再換成新階段的樣子（約 3 秒）</summary>
         public void Evolve(string variant, string palette, int newStage)
@@ -69,8 +132,17 @@ namespace SpiritBeast.Runtime
         void Update()
         {
             if (_body == null) return;
+            if (_anim != null && _current != null && !Looping.Contains(_current) && !_anim.IsPlaying(_clips[_current]))
+                _current = Idle;                       // 揮手、開心…播完已經自動接回待機
+            // 眨眼：每 2.5～5 秒隨機一次；睡覺（已經閉眼）、進化時不眨
+            if (_anim != null && _clips.ContainsKey(Blink) && Time.time >= _nextBlink)
+            {
+                if (_current != Sleep && !Evolving) _anim.Play(_clips[Blink], PlayMode.StopSameLayer);
+                _nextBlink = Time.time + Random.Range(2.5f, 5f);
+            }
             float t = Time.time;
-            float y = Mathf.Sin(t * 2f) * 0.05f;
+            // 有骨架動作時呼吸由 Idle 動作負責，不再整隻上下飄
+            float y = _anim != null ? 0f : Mathf.Sin(t * 2f) * 0.05f;
             if (_hopTime >= 0f)
             {
                 _hopTime += Time.deltaTime;
@@ -98,7 +170,7 @@ namespace SpiritBeast.Runtime
                 if (_evolveTime > 3f) { _evolveTime = -1f; transform.localScale = Vector3.one; }
             }
             _body.localPosition = new Vector3(0f, y, 0f);
-            _body.localRotation = Quaternion.Euler(0f, 200f + spin, 0f);
+            _body.localRotation = Quaternion.Euler(0f, 200f + Yaw + spin, 0f);
         }
 
         // ---- 造型 ----
@@ -164,9 +236,9 @@ namespace SpiritBeast.Runtime
             go.transform.localScale = scale;
             go.transform.localRotation = rot ?? Quaternion.identity;
             go.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>(mesh + ".fbx");
-            if (!_materials.TryGetValue(color, out var mat) && _shader != null)
+            if (!_materials.TryGetValue(color, out var mat))
             {
-                mat = new Material(_shader) { color = color };
+                mat = PaletteMaterial.Flat(color);
                 _materials[color] = mat;
             }
             go.AddComponent<MeshRenderer>().sharedMaterial = mat;

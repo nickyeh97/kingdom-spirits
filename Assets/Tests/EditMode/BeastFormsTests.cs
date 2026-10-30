@@ -28,6 +28,17 @@ namespace SpiritBeast.Tests
             Assert.That(BeastForms.Scale(3), Is.EqualTo(1f));
         }
 
+        [TestCase("dove", 1, 0f)]
+        [TestCase("dove", 2, 1f)]
+        [TestCase("dove", 4, 1f)]
+        [TestCase("lamb", 1, 0f)]
+        [TestCase("lion", 1, 1f)]
+        [TestCase("lion", 3, 1f)]
+        public void PatternStrength_AppearsFromGrowthStage_LionFromBirth(string variant, int stage, float expected)
+        {
+            Assert.That(BeastForms.PatternStrength(variant, stage), Is.EqualTo(expected));
+        }
+
         [Test]
         public void DemoItems_AreTheSixActiveServiceItems()
         {

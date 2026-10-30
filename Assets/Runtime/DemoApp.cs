@@ -32,11 +32,18 @@ namespace SpiritBeast.Runtime
             // 鏡頭固定、框得下最大的小領袖：進化時看得出「長大」
             // 小領袖約 1.63 公尺：頭頂不碰上方按鈕、腳不碰下方色票
             _camera.transform.position = new Vector3(0f, 1.0f, -3.2f);
-            _camera.transform.LookAt(new Vector3(0f, 0.95f, 0f));
+            _camera.transform.LookAt(LookAt);
+            // 上下滑動的基準：目前的仰角與距離（之後以這個角度為中心，上下各 30°）
+            var offset = _camera.transform.position - LookAt;
+            _basePitch = Mathf.Asin(offset.y / offset.magnitude) * Mathf.Rad2Deg;
+            _distance = offset.magnitude;
+            RenderStyle.Init(_camera);
 
             _beast = new GameObject("Beast").AddComponent<BeastView>();
             _encourager = new Encourager(null, _random);
             ResetJourney();
+            _beast.Play(BeastView.Wave);   // 每次打開都揮手打招呼（組長 2026-10-29）
+            Render();
         }
 
         void ResetJourney()
@@ -63,112 +70,112 @@ namespace SpiritBeast.Runtime
             else _beast.Celebrate();
         }
 
-        // ---- 畫面（IMGUI）：以 400 寬的邏輯座標排版 ----
+        // ---- 滑動轉動 ----
 
-        float _s, _x0;
-        GUIStyle _title, _small, _button, _bubble;
-        static readonly Color Ink = new Color(0.29f, 0.23f, 0.16f);
-        static readonly Color Paper = new Color(0.99f, 0.96f, 0.89f);
-        static readonly Color Leaf = new Color(0.55f, 0.78f, 0.49f);
+        static readonly Vector3 LookAt = new Vector3(0f, 0.95f, 0f);
+        const float PitchRange = 30f;
+        float _basePitch, _pitch, _distance;
 
-        Rect R(float x, float y, float w, float h) => new Rect(_x0 + x * _s, y * _s, w * _s, h * _s);
-        float LogicalHeight => Screen.height / _s;
-
-        void EnsureStyles()
+        /// <summary>delta：手指位移（像素）。滑過整個螢幕寬＝轉一圈；上下滑過螢幕高的一半＝30°</summary>
+        void Orbit(Vector2 delta)
         {
-            float width = Mathf.Min(Screen.width, Screen.height * 0.62f);
-            float s = width / 400f;
-            _x0 = (Screen.width - width) / 2f;
-            if (_title != null && Mathf.Approximately(s, _s)) return;
-            _s = s;
-            var font = Resources.Load<Font>("Fonts/NotoSansTC-Subset");
-            GUIStyle Make(GUIStyle from, int size)
-            {
-                var st = new GUIStyle(from) { fontSize = Mathf.RoundToInt(size * _s), wordWrap = true, alignment = TextAnchor.MiddleCenter };
-                if (font != null) st.font = font;
-                return st;
-            }
-            _title = Make(GUI.skin.label, 20);
-            _small = Make(GUI.skin.label, 14);
-            _button = Make(GUI.skin.button, 14);
-            _bubble = Make(GUI.skin.label, 15);
-            _title.normal.textColor = _small.normal.textColor = Ink;
-            _bubble.normal.textColor = Color.white;
-            _bubble.padding = new RectOffset(10, 10, 6, 6);
+            if (_beast.Evolving) return;
+            _beast.Yaw -= delta.x / Screen.width * 360f;
+            _pitch = Mathf.Clamp(_pitch - delta.y / Screen.height * 120f, -PitchRange, PitchRange);
+            float a = (_basePitch + _pitch) * Mathf.Deg2Rad;
+            _camera.transform.position = LookAt + new Vector3(0f, Mathf.Sin(a), -Mathf.Cos(a)) * _distance;
+            _camera.transform.LookAt(LookAt);
         }
 
-        void OnGUI()
-        {
-            EnsureStyles();
-            float top = LogicalHeight * BeastShare;
-            Fill(new Rect(0, top * _s, Screen.width, Screen.height - top * _s), Paper);
-            bool evolving = _beast != null && _beast.Evolving;
-            var v = Catalog.FindVariant(_variant);
+        // ---- 畫面（UGUI）：以 400 寬的邏輯座標排版（UiKit）----
 
-            // 上方：狀態、選靈獸（英文名）、選顏色
-            GUI.Label(R(0, 4, 400, 30), (v?.DisplayName ?? _variant) + " · " + GrowthRules.StageName(_card.Stage), _title);
-            GUI.Label(R(0, 30, 400, 22), "服事 " + _card.Total + " 次　·　小領袖靈獸 Demo", _small);
-            GUI.enabled = !evolving;
+        RectTransform _column, _root, _page, _background;
+        bool _wasEvolving;
+        Vector2Int _screen;
+        float _height;
+
+        void Update()
+        {
+            // 進化過場開始／結束、螢幕轉向時重畫（其他時候只在按鈕觸發後重畫）
+            bool evolving = _beast != null && _beast.Evolving;
+            var screen = new Vector2Int(Screen.width, Screen.height);
+            // 畫布第一個影格的尺寸可能還沒算好：欄的高度一變就重畫
+            bool resized = _column != null && Mathf.Abs(_column.rect.height - _height) > 0.5f;
+            if (evolving != _wasEvolving || screen != _screen || resized) Render();
+        }
+
+        void Render()
+        {
+            if (_column == null) _column = UiKit.CreateCanvas("DemoUI", out _root);
+            if (_page != null) Destroy(_page.gameObject);
+            if (_background != null) Destroy(_background.gameObject);
+            _page = UiKit.Group(_column, "Page");
+            // 底色另放一層、橫跨整個畫面寬度（欄只有 400 寬），放在最底下
+            _background = UiKit.Group(_root, "Background");
+            _background.SetAsFirstSibling();
+            _screen = new Vector2Int(Screen.width, Screen.height);
+            bool evolving = _wasEvolving = _beast != null && _beast.Evolving;
+
+            float height = _height = UiKit.Height(_column);
+            float top = height * BeastShare;
+            // 下方的紙色底（上方是 3D 靈獸）
+            UiKit.Band(_background, UiKit.Paper, 0f, 1f - BeastShare);
+            var v = Catalog.FindVariant(_variant);
+            var p = _page;
+
+            // 上方：狀態、選靈獸（英文名）、選顏色、渲染模式
+            UiKit.Label(p, (v?.DisplayName ?? _variant) + " · " + GrowthRules.StageName(_card.Stage), 20, 0, 4, 400, 30);
+            UiKit.Label(p, "服事 " + _card.Total + " 次　·　小領袖靈獸 Demo", 14, 0, 30, 400, 22);
+            UiKit.Button(p, "渲染：" + RenderStyle.Label, 296, 4, 100, 26, () => { RenderStyle.Toggle(); Render(); }, size: 12);
+            // 點靈獸：跳一下（放在選單按鈕下面，避免擋到按鈕）
+            // 動作預覽：有骨架動作的靈獸（目前小獅幼體）才按得動
+            var acts = new[] { ("揮手", BeastView.Wave), ("吃果子", BeastView.Eat), ("睡覺", BeastView.Sleep), ("玩球", BeastView.PlayToy) };
+            for (int i = 0; i < acts.Length; i++)
+            {
+                var clip = acts[i].Item2;
+                UiKit.Button(p, acts[i].Item1, 70 + i * 66, 96, 60, 26, () => _beast.Play(clip), size: 13,
+                             interactable: !evolving && _beast.Has(clip));
+            }
+            // 點一下＝跳；左右滑＝轉靈獸（看每個角度）；上下滑＝鏡頭繞著靈獸上下轉（上下各 30°）
+            UiKit.Swipe(p, 0, 128, 400, top - 182, () => _beast.Hop(), Orbit);
+
             var variants = Catalog.AvailableVariants.ToList();
             for (int i = 0; i < variants.Count; i++)
             {
-                if (Tint(R(70 + i * 90, 56, 82, 34), variants[i].DisplayName, variants[i].Id == _variant ? Leaf : Color.white))
+                var id = variants[i].Id;
+                UiKit.Button(p, variants[i].DisplayName, 70 + i * 90, 56, 82, 34, () =>
                 {
-                    _variant = variants[i].Id;
+                    _variant = id;
                     _beast.Show(_variant, _palette, _card.Stage);
-                }
+                    Render();
+                }, id == _variant ? UiKit.Leaf : Color.white, interactable: !evolving);
             }
             for (int i = 0; i < Catalog.Palettes.Count; i++)
             {
-                var p = Catalog.Palettes[i];
-                var r = R(24 + i * 44, top - 48, 40, 40);
-                if (p.Id == _palette) Fill(new Rect(r.x - 3, r.y - 3, r.width + 6, r.height + 6), Ink);
-                Fill(r, PaletteMaterial.Hex(p.Main));
-                Fill(new Rect(r.x, r.yMax - r.height * 0.3f, r.width * 0.5f, r.height * 0.3f), PaletteMaterial.Hex(p.Secondary));
-                Fill(new Rect(r.center.x, r.yMax - r.height * 0.3f, r.width * 0.5f, r.height * 0.3f), PaletteMaterial.Hex(p.Accent));
-                if (GUI.Button(r, GUIContent.none, GUIStyle.none))
+                var pal = Catalog.Palettes[i];
+                UiKit.Swatch(p, pal, pal.Id == _palette, 24 + i * 44, top - 48, 40, 40, () =>
                 {
-                    _palette = p.Id;
+                    if (_beast.Evolving) return;
+                    _palette = pal.Id;
                     _beast.Show(_variant, _palette, _card.Stage);
-                }
+                    Render();
+                });
             }
-            // 點靈獸：跳一下
-            if (GUI.Button(R(0, 96, 400, top - 150), GUIContent.none, GUIStyle.none)) _beast.Hop();
 
             // 下方：鼓勵話語、六個服事項目（＋1）、還原
             float y = top + 8;
-            var bubble = R(16, y, 368, 64);
-            Fill(bubble, new Color(0.45f, 0.36f, 0.25f, 0.92f));
-            GUI.Label(bubble, evolving ? "咦？靈獸發光了……" : _headline + "\n" + _message, _bubble);
-
+            UiKit.Bubble(p, evolving ? "咦？靈獸發光了……" : _headline + "\n" + _message, 16, y, 368, 64, 15);
             y += 72;
             var rows = _card.Rows.Where(row => !row.Retired).ToList();
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
-                var r = R(16 + (i % 2) * 188, y + (i / 2) * 50, 180, 44);
-                if (Tint(r, row.Item + "\n" + row.Level + " 等　＋1", row.Unexplored ? Color.white : Leaf)) Serve(row.Item);
+                UiKit.Button(p, row.Item + "\n" + row.Level + " 等　＋1", 16 + (i % 2) * 188, y + (i / 2) * 50, 180, 44,
+                    () => { Serve(row.Item); Render(); }, row.Unexplored ? Color.white : UiKit.Leaf, 13,
+                    icon: IconPath.Service(row.Item), interactable: !evolving);
             }
             y += ((rows.Count + 1) / 2) * 50 + 4;
-            if (GUI.Button(R(120, y, 160, 40), "還原到初始", _button)) ResetJourney();
-            GUI.enabled = true;
-        }
-
-        bool Tint(Rect rect, string text, Color tint)
-        {
-            var old = GUI.backgroundColor;
-            GUI.backgroundColor = tint;
-            bool clicked = GUI.Button(rect, text, _button);
-            GUI.backgroundColor = old;
-            return clicked;
-        }
-
-        static void Fill(Rect rect, Color color)
-        {
-            var old = GUI.color;
-            GUI.color = color;
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = old;
+            UiKit.Button(p, "還原到初始", 120, y, 160, 40, () => { ResetJourney(); Render(); }, interactable: !evolving);
         }
     }
 }

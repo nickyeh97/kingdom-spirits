@@ -2,6 +2,7 @@
     "name": "SpiritBeast.Runtime",
     "rootNamespace": "SpiritBeast.Runtime",
     "references": [
-        "SpiritBeast.Core"
+        "SpiritBeast.Core",
+        "UnityEngine.UI"
     ]
 }

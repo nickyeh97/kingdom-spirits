@@ -11,7 +11,7 @@ This profile holds project-wide decisions for every 3D model in this repository.
 | Style mode (R02) | **NPR toon + outline.** Chibi low poly, toon bands from the engine shader, outline required. No Normal/Roughness/Metallic maps. |
 | Primary engine | Unity 6000.3.25f1 (6.3 LTS), URP, **Web** build for phone browsers. |
 | Secondary engine | Unreal — export preset kept for future use; import test NOT RUN until an Unreal project exists. |
-| Outline method | **Open — decide during G2 shader work.** Candidate for Unity URP: a normal-extrude shader pass; add smoothed outline normals if gaps appear at part joins. |
+| Outline method | **Inverted hull** (decided 2026-10-20, G2). A second pass in `SpiritBeast/PaletteMask` (URP, `SRPDefaultUnlit`, `Cull Front`) extrudes back faces along the normal in clip space; width is a fraction of screen height, so it stays even at any distance. No extra mesh or vertex data needed. If gaps appear at hard edges or part joins, smooth the normals there in Blender first; bake smoothed outline normals only if that is not enough. |
 | Colour delivery | Vertex colour attribute `Mask` (see below) + material parameters; 8 palettes; growth pattern mask texture on UVs from stage 2. |
 | Art boundary | Palworld-like *style vocabulary* only; never copy any Palworld character's shape, name, palette or signature features. Beasts are original, based on biblical animals; names display in English (Lamb, Dove, Lion; later Deer, Eagle, Fish). |
 
@@ -19,7 +19,7 @@ This profile holds project-wide decisions for every 3D model in this repository.
 
 - Three meshes per species: Baby (stages 1–2), Adult (stage 3), Leader (stage 4). One beast on screen at a time.
 - **At most 8,000 evaluated triangles per mesh** (counting triangles, not faces). Single material. Textures at most 1024²; pattern mask at most 512².
-- Web build at most 15 MB compressed in total.
+- Web build at most 30 MB compressed in total (leader decision 2026-10-29; was 15 MB).
 - Origin at the feet centre (Z = 0), facing −Y in Blender (Unity forward after export), 1 unit = 1 metre.
 - Mouth stays a separate child object (`Mouth`) for the "eats the fruit of the Spirit" animation.
 
@@ -39,7 +39,11 @@ Growth patterns (pattern mask on UVs, from stage 2): Lion — every mesh uses a 
 
 Style stays Q (chibi) for every species. Imported models are references for silhouette and pattern, not delivered style.
 
-Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) * pattern : RGB`, where `pattern` is the greyscale pattern mask sampled on UV (1 where a mesh has none). A shape script can add point attributes `shade` (0–1; slot channels multiplied, e.g. a darker spine) and `light` (0–1; blend toward the secondary slot, e.g. a pale throat and belly); both give smooth zones that follow palette swaps. FBX exports colours as Linear. Fixed colours shift when re-imported through sRGB conversion; the engine shader must account for this (open item for G2).
+Engine formula: `colour = A ? (R*primary + G*secondary + B*accent) * pattern : RGB`, where `pattern` is the greyscale pattern mask sampled on UV (1 where a mesh has none). A shape script can add point attributes `shade` (0–1; slot channels multiplied, e.g. a darker spine) and `light` (0–1; blend toward the secondary slot, e.g. a pale throat and belly); both give smooth zones that follow palette swaps. FBX exports colours as Linear. Fixed colours need no conversion in the engine (resolved in G2): `Mask` is a `FLOAT_COLOR` attribute holding linear values, the exporter writes them raw (`colors_type='LINEAR'`), Unity reads vertex colours raw, and the project uses Linear colour space, so the engine matches the Blender preview. Keep both export settings; changing either one shifts every fixed colour.
+
+## Preview renders and the Unity preview mode
+
+Review renders are made with `Tools/render_preview.py` (Cycles, sun strength 3 at (50°, 0, −30°), world (0.55, 0.60, 0.65) × 0.6, AgX). Unity has a matching "Blender preview" render mode (button in the palette preview and the offline demo): Lambert + sun shadows + uniform ambient, then Blender's AgX through a LUT baked by Cycles itself (`Tools/bake_agx_lut.py`, identical to Cycles output at 8 bits). Remaining differences: no bounce light or ambient occlusion in Unity, different camera lens. Change both the script and `RenderStyle.cs` together.
 
 ## Pipeline and delivery (R11, R12)
 

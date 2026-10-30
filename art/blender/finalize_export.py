@@ -170,6 +170,11 @@ body = max((o for o in bpy.data.objects if o.type == 'MESH' and o is not mouth),
 bpy.context.view_layer.objects.active = body
 bpy.ops.object.join()
 body.name = NAME
+# 原點一律放回世界原點（腳底中央）：合併後的原點是「主體零件」的原點，
+# 主體若是建在別處的零件（例如小鴿幼體最大的零件是頭，原點在頭中心），進引擎後整隻會往下沉
+bpy.context.scene.cursor.location = (0, 0, 0)
+select_only(body)
+bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
 
 # 嘴保持獨立（要做張嘴動畫），設成身體的子物件，一起移動
 if mouth:
@@ -245,43 +250,130 @@ for o in parts:
 
 # ---------- 4b) 花紋遮罩：用程序化雜訊「烘」成一張灰階貼圖（例如獅子的毛流紋理） ----------
 # 造型腳本設 scene["pattern"] = {"size": 512, "scale": (x, y, z), "low": 0.8, "high": 1.0}
+#   kind："noise"（預設，毛流）或 "scales"（羽毛鱗紋，只畫在副色上；參數見 bake_feather_scales）
 #   scale：雜訊在 x、y、z 方向的密度。z 小 → 雜訊沿上下方向拉長 → 看起來像往下梳的毛
 #   low/high：最暗、最亮的倍率（1 = 不變暗）。引擎裡「色槽顏色 × 花紋」，固定色不受影響
 # 3D 雜訊不會重複，不會有「同一塊圖複製貼上」的感覺；貼圖只是把它記錄在 UV 上給引擎用。
+def bake_feather_scales(body, img, P):
+    """
+    羽毛鱗紋（小鴿）：一排一排的小圓弧（像插畫裡的鳥翅膀），只畫在副色（翅膀、尾羽）上。
+    不用節點烘焙：直接在 Python 裡把每個三角形「畫」到 UV 貼圖上（光柵化），
+    每個像素用它在模型上的 3D 位置算出圖案 → 圓弧大小以公分計，不受 UV 拉伸影響。
+      spacing：一片羽毛的寬度（公尺）；rim：圓弧線的粗細（佔羽片寬度的比例）；low：圓弧最深的倍率
+    圖案：前面一排蓋住後面一排（像屋瓦），看得到的是每片羽毛「往後的那道圓弧」→ 羽毛尖朝尾巴。
+    """
+    import numpy as np
+    size = img.size[0]
+    sp = float(P.get("spacing", 0.045))
+    r = sp * 0.62                                  # 每片羽毛是半徑 r 的圓
+    rows = sp * 0.55                               # 排與排的間距（比寬度小 → 互相重疊）
+    rim = sp * float(P.get("rim", 0.16))
+    low = float(P.get("low", 0.72))
+    me = body.data
+    me.calc_loop_triangles()
+    n_loops = len(me.loops)
+    uv = np.zeros(n_loops * 2); me.uv_layers.active.data.foreach_get("uv", uv); uv = uv.reshape(-1, 2)
+    col = np.zeros(n_loops * 4); me.color_attributes["Mask"].data.foreach_get("color", col); col = col.reshape(-1, 4)
+    co = np.zeros(len(me.vertices) * 3); me.vertices.foreach_get("co", co); co = co.reshape(-1, 3)
+    vidx = np.zeros(n_loops, dtype=np.int64); me.loops.foreach_get("vertex_index", vidx)
+    out = np.ones((size, size), dtype=np.float32)
+
+    def pattern(a, b):
+        """a：沿著羽片排列的方向；b：往後（−b＝往前）。回傳 1（沒有線）～ low（圓弧線上）。"""
+        val = np.ones_like(a)
+        done = np.zeros(a.shape, dtype=bool)
+        k0 = np.floor(b / rows)
+        for dk in (-1, 0, 1, 2):                   # 前面的排（b 小）先畫、會蓋住後面的 → 由前往後找第一個蓋住這點的圓
+            k = k0 + dk - 1
+            off = np.where(np.mod(k, 2) == 0, 0.0, sp / 2)
+            ac = np.round((a - off) / sp) * sp + off
+            bc = k * rows
+            d = np.hypot(a - ac, b - bc)
+            inside = (d < r) & ~done
+            line = np.clip((d - (r - rim)) / (rim * 0.5), 0.0, 1.0)     # 圓的外緣那一圈變深（邊緣柔和）
+            val = np.where(inside, 1.0 - (1.0 - low) * line, val)
+            done |= inside
+        return val
+
+    for tri in me.loop_triangles:
+        L = list(tri.loops)
+        c = col[L]
+        if not (c[:, 3].mean() > 0.5 and c[:, 1].mean() > 0.6 and c[:, 0].mean() < 0.3 and c[:, 2].mean() < 0.3):
+            continue                               # 只畫副色（翅膀、尾羽）
+        t = uv[L] * size
+        p = co[vidx[L]]
+        n = np.cross(p[1] - p[0], p[2] - p[0]); n = np.abs(n)
+        # 依面的朝向選投影平面：側面（翅膀）用 YZ、上下（尾巴）用 YX、正背面用 XZ
+        if n[0] >= n[1] and n[0] >= n[2]:
+            A, Bv = p[:, 2], p[:, 1]
+        elif n[2] >= n[1]:
+            A, Bv = p[:, 0], p[:, 1]
+        else:
+            A, Bv = p[:, 0], p[:, 2]
+        x0, y0 = np.floor(t.min(0)).astype(int); x1, y1 = np.ceil(t.max(0)).astype(int)
+        x0, y0 = max(x0 - 1, 0), max(y0 - 1, 0); x1, y1 = min(x1 + 1, size - 1), min(y1 + 1, size - 1)
+        if x1 < x0 or y1 < y0:
+            continue
+        xs, ys = np.meshgrid(np.arange(x0, x1 + 1) + 0.5, np.arange(y0, y1 + 1) + 0.5)
+        (ax, ay), (bx, by), (cx, cy) = t
+        den = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy)
+        if abs(den) < 1e-12:
+            continue
+        w0 = ((by - cy) * (xs - cx) + (cx - bx) * (ys - cy)) / den
+        w1 = ((cy - ay) * (xs - cx) + (ax - cx) * (ys - cy)) / den
+        w2 = 1 - w0 - w1
+        m = (w0 >= -0.02) & (w1 >= -0.02) & (w2 >= -0.02)   # 稍微往外多畫一點，接縫不會露白
+        if not m.any():
+            continue
+        a = w0 * A[0] + w1 * A[1] + w2 * A[2]
+        b = w0 * Bv[0] + w1 * Bv[1] + w2 * Bv[2]
+        v = pattern(a[m], b[m])
+        yy, xx = (ys[m] - 0.5).astype(int), (xs[m] - 0.5).astype(int)
+        out[yy, xx] = np.minimum(out[yy, xx], v)
+    rgba = np.repeat(out.reshape(-1, 1), 4, axis=1); rgba[:, 3] = 1.0
+    img.pixels.foreach_set(rgba.ravel())
+
+
 PATTERN = bpy.context.scene.get("pattern")
 if PATTERN:
     size = int(PATTERN.get("size", 512))
     img = bpy.data.images.new(f"{NAME}_Pattern", size, size)
-    tmp = bpy.data.materials.new("PatternBake"); tmp.use_nodes = True
-    nt = tmp.node_tree; nt.nodes.clear()
-    coord = nt.nodes.new("ShaderNodeTexCoord")
-    mapping = nt.nodes.new("ShaderNodeMapping"); mapping.inputs["Scale"].default_value = tuple(PATTERN["scale"])
-    noise = nt.nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 1.0
-    noise.inputs["Detail"].default_value = float(PATTERN.get("detail", 4))
-    ramp = nt.nodes.new("ShaderNodeMapRange")                 # 雜訊 0.3–0.7 → low–high
-    ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 0.3, 0.7
-    ramp.inputs["To Min"].default_value = float(PATTERN.get("low", 0.8))
-    ramp.inputs["To Max"].default_value = float(PATTERN.get("high", 1.0))
-    emit = nt.nodes.new("ShaderNodeEmission"); out = nt.nodes.new("ShaderNodeOutputMaterial")
-    target = nt.nodes.new("ShaderNodeTexImage"); target.image = img; nt.nodes.active = target
-    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
-    nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
-    nt.links.new(noise.outputs["Fac"], ramp.inputs["Value"])
-    nt.links.new(ramp.outputs["Result"], emit.inputs["Color"])
-    nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
-    body.data.materials.clear(); body.data.materials.append(tmp)
-    scene = bpy.context.scene
-    engine = scene.render.engine
-    scene.render.engine = 'CYCLES'; scene.cycles.samples = 1
-    select_only(body)
-    bpy.ops.object.bake(type='EMIT', margin=8)             # 島的邊緣往外多塗 8 像素
-    scene.render.engine = engine
+    if PATTERN.get("kind") == "scales":
+        bake_feather_scales(body, img, PATTERN)
+    else:
+        tmp = bpy.data.materials.new("PatternBake"); tmp.use_nodes = True
+        nt = tmp.node_tree; nt.nodes.clear()
+        coord = nt.nodes.new("ShaderNodeTexCoord")
+        mapping = nt.nodes.new("ShaderNodeMapping"); mapping.inputs["Scale"].default_value = tuple(PATTERN["scale"])
+        nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
+        ramp = nt.nodes.new("ShaderNodeMapRange")
+        ramp.inputs["To Min"].default_value = float(PATTERN.get("low", 0.8))
+        ramp.inputs["To Max"].default_value = float(PATTERN.get("high", 1.0))
+        # 程序化雜訊（小獅的毛流）
+        noise = nt.nodes.new("ShaderNodeTexNoise")
+        noise.inputs["Scale"].default_value = 1.0
+        noise.inputs["Detail"].default_value = float(PATTERN.get("detail", 4))
+        ramp.inputs["From Min"].default_value, ramp.inputs["From Max"].default_value = 0.3, 0.7   # 雜訊 0.3–0.7 → low–high
+        nt.links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
+        nt.links.new(noise.outputs["Fac"], ramp.inputs["Value"])
+        value = ramp.outputs["Result"]
+        emit = nt.nodes.new("ShaderNodeEmission"); out = nt.nodes.new("ShaderNodeOutputMaterial")
+        target = nt.nodes.new("ShaderNodeTexImage"); target.image = img; nt.nodes.active = target
+        nt.links.new(value, emit.inputs["Color"])
+        nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+        body.data.materials.clear(); body.data.materials.append(tmp)
+        scene = bpy.context.scene
+        engine = scene.render.engine
+        scene.render.engine = 'CYCLES'; scene.cycles.samples = 1
+        select_only(body)
+        bpy.ops.object.bake(type='EMIT', margin=8)             # 島的邊緣往外多塗 8 像素
+        scene.render.engine = engine
+        bpy.data.materials.remove(tmp)
+
     tex_dir = os.path.join(OUT_DIR, "textures"); os.makedirs(tex_dir, exist_ok=True)
     img.filepath_raw = os.path.join(tex_dir, img.name + ".png"); img.file_format = 'PNG'
     img.save(); img.pack()
     body["pattern"] = img.name
-    bpy.data.materials.remove(tmp)
     print("花紋遮罩：", img.filepath_raw)
 
 # ---------- 4c) 預覽材質（用跟 Unity 一樣的公式上色；有貼圖就乘上去） ----------
