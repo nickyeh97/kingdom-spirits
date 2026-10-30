@@ -33,6 +33,9 @@ namespace SpiritBeast.Runtime
 
         /// <summary>動作名稱（Blender 的 Action 名）：待機、開心、揮手、吃果子、睡覺、玩玩具</summary>
         public const string Idle = "Idle", Happy = "Happy", Wave = "Wave", Eat = "Eat", Sleep = "Sleep", PlayToy = "Play";
+        const string Blink = "Blink";
+        const int BlinkLayer = 10;                 // 疊在所有動作上面
+        float _nextBlink;
 
         public bool Has(string clip) => _anim != null && _clips.ContainsKey(clip);
         public bool Sleeping => _anim != null && _current == Sleep;
@@ -103,7 +106,17 @@ namespace SpiritBeast.Runtime
                 var n = st.name.Substring(st.name.LastIndexOf('|') + 1);
                 _clips[n] = st.name;
                 st.wrapMode = Looping.Contains(n) ? WrapMode.Loop : WrapMode.Once;
+                if (n == Blink)
+                {
+                    // 眨眼只影響眼睛的骨頭（eye.L/R、lid.L/R），放在高圖層 → 其他骨頭照常播底下的動作
+                    st.layer = BlinkLayer;
+                    st.blendMode = AnimationBlendMode.Blend;
+                    foreach (var t in go.GetComponentsInChildren<Transform>())
+                        if (t.name.StartsWith("eye.") || t.name.StartsWith("lid."))
+                            st.AddMixingTransform(t, false);
+                }
             }
+            _nextBlink = Time.time + Random.Range(1.5f, 3f);
             if (!_clips.ContainsKey(Idle)) { _anim = null; _clips.Clear(); return; }
             _anim.Play(_clips[Idle]);
             _current = Idle;
@@ -121,6 +134,12 @@ namespace SpiritBeast.Runtime
             if (_body == null) return;
             if (_anim != null && _current != null && !Looping.Contains(_current) && !_anim.IsPlaying(_clips[_current]))
                 _current = Idle;                       // 揮手、開心…播完已經自動接回待機
+            // 眨眼：每 2.5～5 秒隨機一次；睡覺（已經閉眼）、進化時不眨
+            if (_anim != null && _clips.ContainsKey(Blink) && Time.time >= _nextBlink)
+            {
+                if (_current != Sleep && !Evolving) _anim.Play(_clips[Blink], PlayMode.StopSameLayer);
+                _nextBlink = Time.time + Random.Range(2.5f, 5f);
+            }
             float t = Time.time;
             // 有骨架動作時呼吸由 Idle 動作負責，不再整隻上下飄
             float y = _anim != null ? 0f : Mathf.Sin(t * 2f) * 0.05f;

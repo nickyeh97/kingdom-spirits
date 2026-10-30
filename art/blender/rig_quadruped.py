@@ -492,9 +492,17 @@ vcol = np.zeros((len(co), 4))
 for li, loop in enumerate(me.loops):
     vcol[loop.vertex_index] = col[li].color[:]
 fixed_dark_or_white = (vcol[:, 3] < 0.5) & ((vcol[:, :3].max(axis=1) < 0.1) | (vcol[:, :3].min(axis=1) > 0.9))
+# 判斷用「整塊零件」：零件中心在眼睛範圍裡，整塊（含反光點邊緣的頂點）都跟 eye 骨。
+# v006 以前逐點判斷，反光點有幾個頂點落在範圍外、留在頭骨上 → 眨眼閉起來時旁邊剩一小塊白色
 for side, f in (("L", lambda p: p), ("R", mirror)):
-    on_eye = (np.linalg.norm((co - np.array(f(J["eye"]))) / np.array(J["eye_radii"]), axis=1) < 1.0) & fixed_dark_or_white
-    on_eye[N_BODY:] = False
+    ec, er = np.array(f(J["eye"])), np.array(J["eye_radii"])
+    on_eye = np.zeros(len(co), dtype=bool)
+    for rt in np.unique(roots):
+        m = roots == rt
+        if m[N_BODY:].any() or not fixed_dark_or_white[m].all():
+            continue
+        if np.linalg.norm((co[m].mean(axis=0) - ec) / er) < 1.0:
+            on_eye |= m
     W[on_eye] = 0; W[on_eye, names.index(f"eye.{side}")] = 1
 # ⑤ 加進來的零件（閉眼弧線、球）已經有自己的頂點群組，這裡不重算
 W[N_BODY:] = 0
@@ -527,6 +535,11 @@ def action(name, frames):
     rig.animation_data.action = act
     bpy.context.scene.frame_start, bpy.context.scene.frame_end = 0, round(frames * TF)
     return act
+
+def rest_pose():
+    """所有骨頭回到休息姿勢（不記關鍵影格）。"""
+    for pb in rig.pose.bones:
+        pb.location = (0, 0, 0); pb.rotation_euler = (0, 0, 0); pb.scale = (1, 1, 1)
 
 def rest_all():
     """所有骨頭回到休息姿勢，並在第 0 格把「每一根」骨頭都記一個關鍵影格。
@@ -695,6 +708,19 @@ for fc in act.fcurves:
     if fc.data_path == 'pose.bones["toy"].scale':
         for kp in fc.keyframe_points:
             kp.interpolation = 'CONSTANT'
+
+# Blink（眨眼，約 0.25 秒）：只動眼睛——張開 → 壓扁 → 換成閉眼弧線 → 壓扁 → 張開。
+# 跟其他動作不一樣：只記眼睛的骨頭（不呼叫 rest_all），Unity 把它疊在任何動作上面播
+# （BeastView：圖層 10＋只影響 eye／lid 骨頭），所以待機、揮手、吃果子時都能眨眼。
+# 縮放用「常數插值」：一格一格切換，卡通的眨眼比較俐落，閉眼弧線也不會慢慢長大。
+act = action("Blink", 7)
+rest_pose()
+SQUASH = (1, 0.4, 1)                            # 眼睛骨往上放，自己的 Y 軸＝上下 → 只壓扁上下
+for f, eye, lid in ((0, OPEN, HIDDEN), (2, SQUASH, HIDDEN), (3, HIDDEN, SHUT), (5, SQUASH, HIDDEN), (7, OPEN, HIDDEN)):
+    key(f, **{"eye.L": {"scale": eye}, "eye.R": {"scale": eye}, "lid.L": {"scale": lid}, "lid.R": {"scale": lid}})
+for fc in act.fcurves:
+    for kp in fc.keyframe_points:
+        kp.interpolation = 'CONSTANT'
 
 # 預設顯示 Idle；回到第 0 格
 rig.animation_data.action = bpy.data.actions["Idle"]
