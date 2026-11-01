@@ -10,9 +10,18 @@ if [ ! -f Builds/Web/index.html ]; then
   echo "還沒有建置：先在 Unity 選單「Spirit Beast/建置 Web（含大小報告）」" >&2
   exit 1
 fi
+# 埠號被占用就停下來，並說是誰占的（serve 的 --no-port-switching 實測沒擋住，會自己換到隨機埠）
+if command -v lsof >/dev/null && lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "$PORT 埠已經有程式在用：" >&2
+  lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >&2
+  echo "" >&2
+  echo "多半是之前開的 npx serve 還在跑（VS Code 另一個終端機分頁）。關掉它，或執行：kill <上面的 PID>" >&2
+  echo "要改用別的埠：PORT=3100 bash Tools/serve-web.sh（平台的 VITE_SPIRIT_GAME_URL 也要跟著改）" >&2
+  exit 1
+fi
 IP="$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || true)"
 echo "遊戲（這台電腦）：http://localhost:$PORT"
 [ -n "$IP" ] && echo "遊戲（同 Wi-Fi 的手機）：http://$IP:$PORT   ← 平台的 VITE_SPIRIT_GAME_URL 填這個"
 echo "停止：Ctrl+C"
-# --no-port-switching：埠號被占用時直接報錯，不會偷偷換成別的埠（那樣平台的連結又會對不上）
+# 上面已經確認埠號是空的；--no-port-switching 留著當第二道保險
 exec npx --yes serve Builds/Web --listen "tcp://0.0.0.0:$PORT" --no-port-switching
