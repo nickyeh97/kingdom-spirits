@@ -392,7 +392,6 @@ namespace SpiritBeast.Runtime
         {
             var v = Catalog.FindVariant(_profile.Variant);
             UiKit.Label(_ui, (v != null ? v.DisplayName : _profile.Variant) + " · " + GrowthRules.StageName(_card.Stage), 22, 0, 8, 400, 34);
-            UiKit.Label(_ui, _childName + " 的靈獸", 14, 0, 40, 400, 24);
             Btn(BackgroundMusic.Label, 316, 8, 76, 26, () => { BackgroundMusic.Toggle(); Render(); }, size: 12);   // 聚會現場可以關掉
             // 點靈獸：跳一下（睡著時點一下＝醒來）；拖拉＝轉靈獸、上下看（跟 Demo 一樣）
             UiKit.Swipe(_ui, 0, 64, 400, _top - 70, () => { Touched(); _beast.Hop(); }, Orbit);
@@ -555,11 +554,8 @@ namespace SpiritBeast.Runtime
             }
 
             y += 78;
-            if (_pickStyle == RenderMode.Blender)
-            {
-                UiKit.Label(_ui, "光影風格的背景是固定的攝影棚，跟美術預覽圖一樣。", 14, 24, y, 352, 44, TextAnchor.MiddleLeft);
-            }
-            else
+            // 光影風格固定攝影棚背景，不列背景選項（2026-11-01 組長：不需要說明文字）
+            if (_pickStyle == RenderMode.Toon)
             {
                 UiKit.Label(_ui, "背景", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
                 y += 30;
@@ -578,9 +574,7 @@ namespace SpiritBeast.Runtime
                         Render();
                     });
                 }
-                y += 66;
             }
-            UiKit.Label(_ui, "背景與風格記在這台手機，換手機要再選一次。", 13, 24, y + 8, 352, 22, TextAnchor.MiddleLeft);
             WardrobeButtons();
         }
 
