@@ -45,5 +45,5 @@ artifacts/
 *.ulf
 
 # 測試資料庫的連線設定（本機測試用，見 docs/DEVELOPMENT.md「測試資料庫」）
-Assets/Resources/supabase.local.json
-Assets/Resources/supabase.local.json.meta
+Assets/Resources/supabase_test.json
+Assets/Resources/supabase_test.json.meta

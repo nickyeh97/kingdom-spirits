@@ -11,8 +11,9 @@ namespace SpiritBeast.Editor
     {
         const string ScenePath = "Assets/Scenes/Main.unity";
         const string OutputDir = "Builds/Web";
-        const string SizeReportPath = "Builds/Web-size-report.txt";
-        const string TestConfigPath = "Assets/Resources/supabase.local.json";   // 放在 Web 資料夾外面，不會被部署
+        const string SizeReportPath = "Builds/Web-size-report.txt";   // 放在 Web 資料夾外面，不會被部署
+        // 測試資料庫的連線設定（不進版控）。檔名不用多個點：Unity 的 Resources 名稱遇到 supabase.local 這種寫法容易讀不到
+        const string TestConfigPath = "Assets/Resources/supabase_test.json";
         // 下載大小上限：Web 建置壓縮後 30 MB（組長裁決 2026-10-29，GDD §10；原訂 15 MB）
         const long BudgetBytes = 30L * 1024 * 1024;
 
@@ -50,6 +51,10 @@ namespace SpiritBeast.Editor
                 }
                 Debug.LogWarning($"[Build] 這次建置連的是測試資料庫（{TestConfigPath}）：只給本機測試用，不要部署");
             }
+            // 每次建置都寫出連到哪個資料庫（只有網址，不含金鑰），一眼看出是正式還是測試
+            string configPath = File.Exists(TestConfigPath) ? TestConfigPath : "Assets/Resources/supabase.json";
+            var buildConfig = SpiritBeast.Core.SupabaseConfig.Parse(File.Exists(configPath) ? File.ReadAllText(configPath) : null);
+            Debug.Log($"[Build] 連線設定：{configPath} → {(buildConfig != null ? buildConfig.Url : "（無法使用：格式不對或仍是範本值）")}");
 
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {

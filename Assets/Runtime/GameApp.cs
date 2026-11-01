@@ -77,8 +77,8 @@ namespace SpiritBeast.Runtime
             Render();   // 「靈獸準備中…」
 
             var auth = AuthFragment.Parse(_fragment);
-            // 測試資料庫：本機放 Resources/supabase.local.json（不進版控）就改連它，正式的 supabase.json 不用動
-            var configAsset = Resources.Load<TextAsset>("supabase.local");
+            // 測試資料庫：本機放 Resources/supabase_test.json（不進版控）就改連它，正式的 supabase.json 不用動
+            var configAsset = Resources.Load<TextAsset>("supabase_test");
             if (configAsset == null) configAsset = Resources.Load<TextAsset>("supabase");
             var config = SupabaseConfig.Parse(configAsset != null ? configAsset.text : null);
             if (!auth.IsValid) { Fail("請從牧區平台的「我的 → 小領袖靈獸」開啟"); return; }
@@ -92,6 +92,8 @@ namespace SpiritBeast.Runtime
                 return;
             }
 
+            // 連到哪個資料庫（只有網址）：本機測試時拿到 401 先看這行——平台與遊戲要連同一個專案
+            Debug.Log("[設定] 連線到 " + config.Url + "（Resources/" + configAsset.name + ".json）");
             _childId = auth.ChildId;
             _api = new SupabaseClient(config, auth.AccessToken);
             StartCoroutine(LoadAll());

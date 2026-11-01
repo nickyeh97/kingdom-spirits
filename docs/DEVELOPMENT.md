@@ -138,10 +138,13 @@ npx --yes serve Builds/Web
 要從第 0 次服事測到小領袖、又不想寫進正式資料庫時，連到**測試用的 Supabase 專案**
 （建法與快轉工具見平台 repo `docs/DEVELOPMENT.md`「測試資料庫」）：
 
-1. 新增 `Assets/Resources/supabase.local.json`（已被 `.gitignore` 排除），格式同 `supabase.json`，填測試專案的 URL 與 anon key。
+1. 新增 `Assets/Resources/supabase_test.json`（已被 `.gitignore` 排除），格式同 `supabase.json`，填測試專案的 URL 與 anon key。
+   （2026-11-01 前叫 `supabase.local.json`：檔名有兩個點，Unity 的 Resources 讀不到，遊戲默默連回正式資料庫、拿到 401。）
    有這個檔案時遊戲改連它，正式的 `supabase.json` 不用動。
 2. 建置 Web → `npx --yes serve Builds/Web`。建置時 Console 會提醒「這次建置連的是測試資料庫」。
-3. 測完**刪掉 `supabase.local.json`**。忘了刪也不會部署出去：CI（命令列建置）看到這個檔案會直接拒絕建置。
+3. 確認連對：建置時 Console 會印「連線設定：… → https://<專案>.supabase.co」；遊戲啟動時瀏覽器 Console 也會印「連線到 …」。
+   **平台與遊戲必須連同一個專案**，否則登入憑證不通用，遊戲會顯示「登入已逾時」（實際是 401）。
+4. 測完**刪掉 `supabase_test.json`**。忘了刪也不會部署出去：CI（命令列建置）看到這個檔案會直接拒絕建置。
 
 ### 編輯器 Play 模式
 
