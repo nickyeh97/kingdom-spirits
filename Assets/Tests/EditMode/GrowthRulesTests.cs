@@ -89,6 +89,16 @@ namespace SpiritBeast.Tests
         }
 
         [Test]
+        public void Catalog_UnknownIdsFallBack()
+        {
+            // 資料庫只檢查格式（2026-11-01）：新版遊戲寫入的新靈獸／配色，舊版遊戲讀到也不能壞——
+            // 配色退回 p1，靈獸查不到（畫面用占位造型、名稱直接顯示 id）
+            Assert.That(Catalog.FindPalette("p99").Id, Is.EqualTo("p1"));
+            Assert.That(Catalog.FindPalette(null).Id, Is.EqualTo("p1"));
+            Assert.That(Catalog.FindVariant("unicorn"), Is.Null);
+        }
+
+        [Test]
         public void Catalog_TextNeverCompares()
         {
             // 守則紅燈 #1／#7：文案不得出現比較或罪惡感字眼

@@ -1,16 +1,48 @@
 {
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    },
+    {
       "source": "/Build/(.*)\\.unityweb",
-      "headers": [{ "key": "Content-Encoding", "value": "br" }]
+      "headers": [
+        {
+          "key": "Content-Encoding",
+          "value": "br"
+        }
+      ]
     },
     {
       "source": "/Build/(.*)\\.wasm\\.unityweb",
-      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
     },
     {
       "source": "/Build/(.*)\\.js\\.unityweb",
-      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
     }
   ]
 }

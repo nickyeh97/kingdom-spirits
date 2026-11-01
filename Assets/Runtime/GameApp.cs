@@ -77,7 +77,9 @@ namespace SpiritBeast.Runtime
             Render();   // 「靈獸準備中…」
 
             var auth = AuthFragment.Parse(_fragment);
-            var configAsset = Resources.Load<TextAsset>("supabase");
+            // 測試資料庫：本機放 Resources/supabase.local.json（不進版控）就改連它，正式的 supabase.json 不用動
+            var configAsset = Resources.Load<TextAsset>("supabase.local");
+            if (configAsset == null) configAsset = Resources.Load<TextAsset>("supabase");
             var config = SupabaseConfig.Parse(configAsset != null ? configAsset.text : null);
             if (!auth.IsValid) { Fail("請從牧區平台的「我的 → 小領袖靈獸」開啟"); return; }
             if (config == null) { Fail("遊戲設定尚未完成，請通知同工"); return; }

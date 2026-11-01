@@ -107,7 +107,8 @@ npx --yes serve Builds/Web
 | `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301` | 授權交接測試：網址列的 `#…` 應立刻消失；沒有 Supabase 設定時停在「遊戲設定尚未完成」（正常） |
 
 - **`#demo` 要在開網頁時就帶著**：網頁已經開著才在網址列補 `#demo`，瀏覽器不會重新載入（舊版會停在正式遊戲的畫面，
-  按一次重新整理就好；2026-10-30 起模板偵測到 `#…` 改變會自動重新載入）。
+  按一次重新整理就好；2026-10-30 起模板偵測到網址改成 `#demo` 會自動重新載入）。
+  **只有 `#demo` 會觸發重新載入**：載入後才出現的 `#at=…` 一律忽略並清掉（2026-11-01 資安調整，避免別的視窗把畫面換成另一個帳號）。
 - Unity 的「Build And Run」也會開一個本機伺服器（隨機埠號，例如 `localhost:63631`），一樣在網址後面加 `/#demo`。
 - **手機測試**：手機連同一個 Wi-Fi，開 Network 網址後面加 `/#demo`。開不起來時，檢查 Mac 的防火牆是否擋住 Node。
 - 右下角的秒數是「這台裝置」的載入時間；本機與區域網路比 4G 快很多，4G 秒數要部署到 Vercel 後再量。
@@ -131,6 +132,16 @@ npx --yes serve Builds/Web
 5. RLS 驗收：把網址片段的 `child=` 換成別人孩子的 id，應顯示「找不到這位孩子的資料」。
 6. 錯誤畫面：等 access token 過期（約 1 小時）再按＋1，應顯示「登入已逾時」；
    錯誤頁的「回到牧區平台」會回到平台的上一頁，再點一次「小領袖靈獸」即可。
+
+### 測試資料庫（測完整流程，不碰正式環境）
+
+要從第 0 次服事測到小領袖、又不想寫進正式資料庫時，連到**測試用的 Supabase 專案**
+（建法與快轉工具見平台 repo `docs/DEVELOPMENT.md`「測試資料庫」）：
+
+1. 新增 `Assets/Resources/supabase.local.json`（已被 `.gitignore` 排除），格式同 `supabase.json`，填測試專案的 URL 與 anon key。
+   有這個檔案時遊戲改連它，正式的 `supabase.json` 不用動。
+2. 建置 Web → `npx --yes serve Builds/Web`。建置時 Console 會提醒「這次建置連的是測試資料庫」。
+3. 測完**刪掉 `supabase.local.json`**。忘了刪也不會部署出去：CI（命令列建置）看到這個檔案會直接拒絕建置。
 
 ### 編輯器 Play 模式
 
@@ -268,6 +279,7 @@ Secrets 未設定時，`unity` 與 `deploy` 會在 Actions 頁面留下黃色警
    **不要**在 Vercel 網站用「Import Git Repository」——Vercel 無法建置 Unity，建置交給 CI。
 2. 產生的 `.vercel/project.json` 裡有 `orgId` 與 `projectId`，分別存成 Secrets `VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`。
 3. 到 [vercel.com/account/tokens](https://vercel.com/account/tokens) 建立 token，存成 `VERCEL_TOKEN`。
-4. 之後每次 merge 進 `main`，CI 建置完成就會自動部署。`vercel.json`（壓縮檔的標頭設定）會一起帶上去。
+4. 之後每次 merge 進 `main`，CI 建置完成就會自動部署。`vercel.json` 會一起帶上去：壓縮檔的標頭，以及
+   **禁止被別的網站用框架嵌入**（`X-Frame-Options: DENY`、`frame-ancestors 'none'`）與 `Referrer-Policy: no-referrer`。
 
 部署後的網址要填回牧區平台，作為家長服事卡頁「去看靈獸」連結的目標（平台端 P1）。
