@@ -26,7 +26,8 @@ namespace SpiritBeast.Core
             {
                 var o = JObject.Parse(json ?? "");
                 var url = ((string)o["url"] ?? "").Trim().TrimEnd('/');
-                var key = ((string)o["anonKey"] ?? "").Trim();
+                // 金鑰是 JWT，本身不會有空白：複製貼上時夾帶的空格、換行一律去掉（2026-11-01 實際遇到 401 Invalid API key）
+                var key = System.Text.RegularExpressions.Regex.Replace((string)o["anonKey"] ?? "", @"\s+", "");
                 if (!url.StartsWith("https://") || url.Contains("YOUR-PROJECT") || key.Length == 0 || key.Contains("YOUR-ANON-KEY"))
                     return null;
                 return new SupabaseConfig(url, key);

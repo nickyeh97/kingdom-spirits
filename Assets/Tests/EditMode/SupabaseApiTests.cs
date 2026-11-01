@@ -17,6 +17,14 @@ namespace SpiritBeast.Tests
             Assert.That(c.AnonKey, Is.EqualTo("key"));
         }
 
+        [Test]
+        public void Config_StripsWhitespaceCopiedIntoTheKey()
+        {
+            // 複製貼上時金鑰中間夾了空格、換行（JSON 的 \n）：伺服器回 401 Invalid API key
+            var c = SupabaseConfig.Parse("{\"url\":\"https://abc.supabase.co\",\"anonKey\":\" eyJhbG ciOi\\nJIUzI1 \"}");
+            Assert.That(c.AnonKey, Is.EqualTo("eyJhbGciOiJIUzI1"));
+        }
+
         [TestCase(null)]
         [TestCase("")]
         [TestCase("not json")]
