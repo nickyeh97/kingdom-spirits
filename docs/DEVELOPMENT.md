@@ -89,7 +89,18 @@ dotnet build Tools/EditorCompileCheck
 
 ### 本機預覽（VS Code 終端機）
 
-先在 Unity 建置（選單「Spirit Beast/建置 Web（含大小報告）」），再在 VS Code 開 repo 資料夾，
+**固定埠號（建議）**：Unity 的「Build And Run」每次都換一個隨機埠號（例如 55422、62255），
+平台的 `VITE_SPIRIT_GAME_URL` 就對不上。改成 Unity **只建置**（選單「Spirit Beast/建置 Web（含大小報告）」），
+再開一個一直跑著的伺服器，固定用 3000 埠：
+
+```bash
+bash Tools/serve-web.sh          # 會印出這台電腦與手機要開的網址；開著不用關
+```
+
+之後每次在 Unity 重新建置，回瀏覽器重新整理就好（看起來還是舊的就 Shift＋重新整理）。
+3000 埠被占用時會直接報錯、不會偷偷換埠；要換埠：`PORT=3100 bash Tools/serve-web.sh`（平台的網址也要跟著改）。
+
+也可以手動執行（同樣在 Unity 建置之後）：VS Code 開 repo 資料夾，
 選單 **Terminal → New Terminal**（或 `` Ctrl+` ``），在 repo 根目錄執行：
 
 ```bash
@@ -141,7 +152,7 @@ npx --yes serve Builds/Web
 1. 新增 `Assets/Resources/supabase_test.json`（已被 `.gitignore` 排除），格式同 `supabase.json`，填測試專案的 URL 與 anon key。
    （2026-11-01 前叫 `supabase.local.json`：檔名有兩個點，Unity 的 Resources 讀不到，遊戲默默連回正式資料庫、拿到 401。）
    有這個檔案時遊戲改連它，正式的 `supabase.json` 不用動。
-2. 建置 Web → `npx --yes serve Builds/Web`。建置時 Console 會提醒「這次建置連的是測試資料庫」。
+2. 建置 Web（Unity 選單，不要用 Build And Run）→ `bash Tools/serve-web.sh`（固定 3000 埠）。建置時 Console 會提醒「這次建置連的是測試資料庫」。
 3. 確認連對：建置時 Console 會印「連線設定：… → https://<專案>.supabase.co」；遊戲啟動時瀏覽器 Console 也會印「連線到 …」。
    **平台與遊戲必須連同一個專案**，否則登入憑證不通用，遊戲會顯示「登入已逾時」（實際是 401）。
 4. 測完**刪掉 `supabase_test.json`**。忘了刪也不會部署出去：CI（命令列建置）看到這個檔案會直接拒絕建置。
