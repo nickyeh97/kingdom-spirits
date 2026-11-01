@@ -82,7 +82,15 @@ namespace SpiritBeast.Runtime
             if (configAsset == null) configAsset = Resources.Load<TextAsset>("supabase");
             var config = SupabaseConfig.Parse(configAsset != null ? configAsset.text : null);
             if (!auth.IsValid) { Fail("請從牧區平台的「我的 → 小領袖靈獸」開啟"); return; }
-            if (config == null) { Fail("遊戲設定尚未完成，請通知同工"); return; }
+            if (config == null)
+            {
+                // 給開發者看的原因（家長只看到下面那句）：用了哪個檔、為什麼不能用
+                var file = configAsset == null ? "找不到 Resources/supabase.json"
+                    : "Resources/" + configAsset.name + ".json 的 url／anonKey 格式不對或仍是範本值";
+                Debug.LogError("[設定] 連線設定無法使用：" + file);
+                Fail("遊戲設定尚未完成，請通知同工");
+                return;
+            }
 
             _childId = auth.ChildId;
             _api = new SupabaseClient(config, auth.AccessToken);
