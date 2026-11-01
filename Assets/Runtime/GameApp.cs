@@ -116,7 +116,7 @@ namespace SpiritBeast.Runtime
             // 渲染風格（卡通／光影）與背景：孩子在「換裝扮 → 背景」選，記在這台裝置
             RenderStyle.Init(_camera);
             _backdrop = Backdrop.Load();
-            ApplyBackdrop(_backdrop);
+            ApplyBackdrop(Shown());
         }
 
         // ---- 拖拉視角（跟 Demo 一樣）：左右滑＝轉靈獸，上下滑＝鏡頭以目前角度為中心上下各 30° ----
@@ -138,16 +138,23 @@ namespace SpiritBeast.Runtime
         // ---- 背景與渲染風格 ----
         Backdrop _backdrop;
 
-        /// <summary>渲染風格切換會改背景色（光影模式用算圖的灰），所以每次切換後都要再套一次背景</summary>
-        void ApplyBackdrop(Backdrop b)
+        /// <summary>現在畫面用的背景：光影風格固定攝影棚灰；卡通風格用選的那一組（換裝扮時用正在預覽的）</summary>
+        Backdrop Shown()
         {
-            if (_camera != null) _camera.backgroundColor = b.Sky;
+            if (RenderStyle.Mode == RenderMode.Blender) return Backdrop.Studio;
+            return _page == Page.Wardrobe && _pickBackdrop != null ? Backdrop.Find(_pickBackdrop) : _backdrop;
         }
 
-        void ApplyStyle(RenderMode mode, Backdrop b)
+        /// <summary>鏡頭背景（上方）；介面底色（下方）在 Render 用同一色</summary>
+        void ApplyBackdrop(Backdrop b)
+        {
+            if (_camera != null) _camera.backgroundColor = b.Color;
+        }
+
+        void ApplyStyle(RenderMode mode)
         {
             if (RenderStyle.Mode != mode) RenderStyle.Apply(mode);
-            ApplyBackdrop(b);
+            ApplyBackdrop(Shown());
         }
 
         // ---- 資料 ----
@@ -333,8 +340,10 @@ namespace SpiritBeast.Runtime
             }
             float share = _camera != null && _camera.enabled ? _camera.rect.height : 0f;
             _top = _height * share;
-            var backdrop = _page == Page.Wardrobe ? Backdrop.Find(_pickBackdrop) : _backdrop;
-            UiKit.Band(_background, backdrop.Paper, 0f, 1f - share);
+            // 上下同一色：下方介面的底色跟靈獸身後一樣（2026-11-01 組長）
+            var shown = Shown();
+            ApplyBackdrop(shown);
+            UiKit.Band(_background, shown.Color, 0f, 1f - share);
 
             switch (_page)
             {
@@ -411,7 +420,7 @@ namespace SpiritBeast.Runtime
         /// <summary>3D 可愛按鈕：顏色跟著背景，卡通風格加描邊、光影風格改用落影</summary>
         Button CuteBtn(string text, float x, float y, float w, int colorIndex, Action onClick)
         {
-            var b = _page == Page.Wardrobe ? Backdrop.Find(_pickBackdrop) : _backdrop;
+            var b = Shown();
             var face = b.Buttons[Mathf.Clamp(colorIndex, 0, b.Buttons.Length - 1)];
             return UiKit.CuteButton(_ui, text, x, y, w, 66, onClick, face, RenderStyle.Mode == RenderMode.Toon,
                                     18, !_busy);
@@ -516,7 +525,7 @@ namespace SpiritBeast.Runtime
             {
                 // 背景、渲染風格是即時預覽：取消就換回原本的
                 _pickBackdrop = _backdrop.Id;
-                ApplyStyle(_pickStyleBefore, _backdrop);
+                ApplyStyle(_pickStyleBefore);
                 GoHome();
             });
             Btn("儲存", 210, by, 150, 60, () => StartCoroutine(SaveLook()), UiKit.Leaf);
@@ -524,30 +533,13 @@ namespace SpiritBeast.Runtime
 
         RenderMode _pickStyleBefore;
 
-        /// <summary>換裝扮 →「背景」分頁：四種背景色、兩種渲染風格，點了立刻預覽</summary>
+        /// <summary>
+        /// 換裝扮 →「背景」分頁：先選畫面風格；卡通風格才有四種背景可選，光影風格固定美術預覽的攝影棚灰。
+        /// 點了立刻預覽，儲存才算數。
+        /// </summary>
         void DrawBackdropPicker()
         {
             float y = _top + 14;
-            UiKit.Label(_ui, "背景", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
-            y += 30;
-            for (int i = 0; i < Backdrop.All.Count; i++)
-            {
-                var b = Backdrop.All[i];
-                float x = 24 + i * 88;
-                if (b.Id == _pickBackdrop) UiKit.Box(_ui, UiKit.Ink, x - 4, y - 4, 88, 66);
-                var sw = UiKit.Box(_ui, b.Sky, x, y, 80, 58);
-                UiKit.Box(sw.transform, b.Paper, 0, 34, 80, 24, false);
-                UiKit.Label(sw.transform, b.Name, 14, 0, 34, 80, 24);
-                UiKit.Hotspot(_ui, x, y, 80, 58, () =>
-                {
-                    if (_busy) return;
-                    _pickBackdrop = b.Id;
-                    ApplyBackdrop(b);
-                    Render();
-                });
-            }
-
-            y += 80;
             UiKit.Label(_ui, "畫面風格", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
             y += 30;
             var styles = new[] { (RenderMode.Toon, "卡通", "描邊、顏色明亮"), (RenderMode.Blender, "光影", "柔和的光與影子") };
@@ -557,11 +549,38 @@ namespace SpiritBeast.Runtime
                 Btn(name + "\n" + hint, 24 + i * 180, y, 172, 58, () =>
                 {
                     _pickStyle = mode;
-                    ApplyStyle(mode, Backdrop.Find(_pickBackdrop));
+                    ApplyStyle(mode);
                     Render();
                 }, _pickStyle == mode ? UiKit.Leaf : Color.white, 15);
             }
-            UiKit.Label(_ui, "背景與風格記在這台手機，換手機要再選一次。", 13, 24, y + 66, 352, 22, TextAnchor.MiddleLeft);
+
+            y += 78;
+            if (_pickStyle == RenderMode.Blender)
+            {
+                UiKit.Label(_ui, "光影風格的背景是固定的攝影棚，跟美術預覽圖一樣。", 14, 24, y, 352, 44, TextAnchor.MiddleLeft);
+            }
+            else
+            {
+                UiKit.Label(_ui, "背景", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
+                y += 30;
+                for (int i = 0; i < Backdrop.All.Count; i++)
+                {
+                    var b = Backdrop.All[i];
+                    float x = 24 + i * 88;
+                    if (b.Id == _pickBackdrop) UiKit.Box(_ui, UiKit.Ink, x - 4, y - 4, 88, 66);
+                    var sw = UiKit.Box(_ui, b.Color, x, y, 80, 58);
+                    UiKit.Label(sw.transform, b.Name, 15, 0, 0, 80, 58);
+                    UiKit.Hotspot(_ui, x, y, 80, 58, () =>
+                    {
+                        if (_busy) return;
+                        _pickBackdrop = b.Id;
+                        ApplyBackdrop(Shown());
+                        Render();
+                    });
+                }
+                y += 66;
+            }
+            UiKit.Label(_ui, "背景與風格記在這台手機，換手機要再選一次。", 13, 24, y + 8, 352, 22, TextAnchor.MiddleLeft);
             WardrobeButtons();
         }
 

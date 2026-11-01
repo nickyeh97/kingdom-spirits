@@ -128,7 +128,8 @@ namespace SpiritBeast.Runtime
             float height = _height = UiKit.Height(_column);
             float top = height * BeastShare;
             // 下方的紙色底（上方是 3D 靈獸）
-            UiKit.Band(_background, UiKit.Paper, 0f, 1f - BeastShare);
+            // 光影模式：下方介面也用攝影棚灰，上下一致（2026-11-01 組長）
+            UiKit.Band(_background, RenderStyle.Mode == RenderMode.Blender ? RenderStyle.StudioBackground : UiKit.Paper, 0f, 1f - BeastShare);
             var v = Catalog.FindVariant(_variant);
             var p = _page;
 
