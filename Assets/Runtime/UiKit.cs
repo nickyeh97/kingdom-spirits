@@ -158,6 +158,39 @@ namespace SpiritBeast.Runtime
             return button;
         }
 
+        /// <summary>
+        /// 3D 感的可愛按鈕（靈獸之家的主要按鈕）：糖果色的面、下方一層深一點的「側邊」看起來有厚度、
+        /// 上半部一道亮光；按下去整顆往下沉。outlined＝卡通風格（深棕描邊，跟靈獸的描邊一致）；
+        /// 不描邊＝光影風格（改用柔和的落影）。
+        /// </summary>
+        public static Button CuteButton(Transform parent, string text, float x, float y, float w, float h, Action onClick,
+                                        Color face, bool outlined, int size = 18, bool interactable = true)
+        {
+            const float depth = 6f;
+            float faceH = h - depth;
+            var side = Color.Lerp(face, Ink, 0.28f);
+            if (outlined) Box(parent, Ink, x - 2f, y - 2f, w + 4f, h + 4f);
+            else Box(parent, new Color(0f, 0f, 0f, 0.13f), x + 2f, y + 5f, w, h);
+            Box(parent, side, x, y + depth, w, faceH);
+
+            var img = Place(NewImage(parent, "CuteButton", face, true), x, y, w, faceH);
+            var button = img.gameObject.AddComponent<Button>();
+            button.targetGraphic = img;
+            button.interactable = interactable;
+            var colors = button.colors;
+            colors.pressedColor = new Color(0.93f, 0.93f, 0.93f);
+            colors.disabledColor = new Color(0.85f, 0.85f, 0.85f, 0.7f);
+            button.colors = colors;
+            if (onClick != null) button.onClick.AddListener(() => onClick());
+            img.gameObject.AddComponent<PressSink>().Depth = depth - 1f;
+
+            // 亮光：上半部一道半透明白（光影風格稍微柔一點）
+            var shine = Box(img.transform, new Color(1f, 1f, 1f, outlined ? 0.45f : 0.32f), 6f, 4f, w - 12f, faceH * 0.42f);
+            shine.raycastTarget = false;
+            Label(img.transform, text, size, 4f, 0f, w - 8f, faceH);
+            return button;
+        }
+
         /// <summary>透明的大按鈕（例如點靈獸讓牠跳一下）</summary>
         public static Button Hotspot(Transform parent, float x, float y, float w, float h, Action onClick)
         {

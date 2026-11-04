@@ -31,7 +31,8 @@
 
 ## Supabase 設定（一次性）
 
-遊戲直接讀寫牧區平台的 Supabase。把平台 `.env.local` 的兩個值填進 `Assets/Resources/supabase.json` 並 commit：
+遊戲直接讀寫牧區平台的 Supabase。`Assets/Resources/supabase.json` **已填入正式專案的公開值**（2026-10-30）；
+換專案時把平台 `.env.local` 的兩個值填進去並 commit：
 
 ```json
 {
@@ -42,7 +43,8 @@
 
 - 兩個都是公開值（平台網頁本來就帶著它們），安全邊界是資料庫 RLS；**不要**放 service role key。
 - 檔案還是範本值時，遊戲會顯示「遊戲設定尚未完成」。
-- 資料表與 RLS 由平台 repo 的 migration `2026-10-02_service_card.sql` 建立，要先在 Supabase 執行。
+- 資料表與 RLS 由平台 repo 的 migration `2026-10-02_service_card.sql` 建立，要先在 Supabase 執行
+  （平台端要做的事整理在平台 repo 的 `docs/SPIRIT_BEAST_OPS.md`，一頁看完）。
 
 ## 測試
 
@@ -87,7 +89,18 @@ dotnet build Tools/EditorCompileCheck
 
 ### 本機預覽（VS Code 終端機）
 
-先在 Unity 建置（選單「Spirit Beast/建置 Web（含大小報告）」），再在 VS Code 開 repo 資料夾，
+**固定埠號（建議）**：Unity 的「Build And Run」每次都換一個隨機埠號（例如 55422、62255），
+平台的 `VITE_SPIRIT_GAME_URL` 就對不上。改成 Unity **只建置**（選單「Spirit Beast/建置 Web（含大小報告）」），
+再開一個一直跑著的伺服器，固定用 3000 埠：
+
+```bash
+bash Tools/serve-web.sh          # 會印出這台電腦與手機要開的網址；開著不用關
+```
+
+之後每次在 Unity 重新建置，回瀏覽器重新整理就好（看起來還是舊的就 Shift＋重新整理）。
+3000 埠被占用時會直接報錯、不會偷偷換埠；要換埠：`PORT=3100 bash Tools/serve-web.sh`（平台的網址也要跟著改）。
+
+也可以手動執行（同樣在 Unity 建置之後）：VS Code 開 repo 資料夾，
 選單 **Terminal → New Terminal**（或 `` Ctrl+` ``），在 repo 根目錄執行：
 
 ```bash
@@ -105,7 +118,8 @@ npx --yes serve Builds/Web
 | `http://localhost:3000/#at=test&child=3f2504e0-4f89-11d3-9a0c-0305e82c3301` | 授權交接測試：網址列的 `#…` 應立刻消失；沒有 Supabase 設定時停在「遊戲設定尚未完成」（正常） |
 
 - **`#demo` 要在開網頁時就帶著**：網頁已經開著才在網址列補 `#demo`，瀏覽器不會重新載入（舊版會停在正式遊戲的畫面，
-  按一次重新整理就好；2026-10-30 起模板偵測到 `#…` 改變會自動重新載入）。
+  按一次重新整理就好；2026-10-30 起模板偵測到網址改成 `#demo` 會自動重新載入）。
+  **只有 `#demo` 會觸發重新載入**：載入後才出現的 `#at=…` 一律忽略並清掉（2026-11-01 資安調整，避免別的視窗把畫面換成另一個帳號）。
 - Unity 的「Build And Run」也會開一個本機伺服器（隨機埠號，例如 `localhost:63631`），一樣在網址後面加 `/#demo`。
 - **手機測試**：手機連同一個 Wi-Fi，開 Network 網址後面加 `/#demo`。開不起來時，檢查 Mac 的防火牆是否擋住 Node。
 - 右下角的秒數是「這台裝置」的載入時間；本機與區域網路比 4G 快很多，4G 秒數要部署到 Vercel 後再量。
@@ -123,10 +137,25 @@ npx --yes serve Builds/Web
 
 1. 平台 repo 的 `.env.local` 加一行 `VITE_SPIRIT_GAME_URL=http://localhost:3000`，執行 `npm run dev`。
 2. 本 repo 建置 Web 後執行 `npx --yes serve Builds/Web`（預設 3000 埠）。
-3. 用**已審核、綁定兒童班或幼童班孩子**的家長帳號登入平台 →「我的 → 小領袖靈獸」→ 會跳到遊戲。
+3. 用**已審核、綁定兒童班孩子**的家長帳號登入平台（幼童班暫不開放，2026-10-03） →「我的 → 小領袖靈獸」→ 會跳到遊戲。
 4. 驗收：第一次相遇選靈獸 → 主畫面 → ＋1 服事（家長確認 → 項目 → 果子 → 儲存）→ 慶祝畫面；
    第 4 次服事時會進化。回平台再開一次，紀錄與外觀都還在。
 5. RLS 驗收：把網址片段的 `child=` 換成別人孩子的 id，應顯示「找不到這位孩子的資料」。
+6. 錯誤畫面：等 access token 過期（約 1 小時）再按＋1，應顯示「登入已逾時」；
+   錯誤頁的「回到牧區平台」會回到平台的上一頁，再點一次「小領袖靈獸」即可。
+
+### 測試資料庫（測完整流程，不碰正式環境）
+
+要從第 0 次服事測到小領袖、又不想寫進正式資料庫時，連到**測試用的 Supabase 專案**
+（建法與快轉工具見平台 repo `docs/DEVELOPMENT.md`「測試資料庫」）：
+
+1. 新增 `Assets/Resources/supabase_test.json`（已被 `.gitignore` 排除），格式同 `supabase.json`，填測試專案的 URL 與 anon key。
+   （2026-11-01 前叫 `supabase.local.json`：檔名有兩個點，Unity 的 Resources 讀不到，遊戲默默連回正式資料庫、拿到 401。）
+   有這個檔案時遊戲改連它，正式的 `supabase.json` 不用動。
+2. 建置 Web（Unity 選單，不要用 Build And Run）→ `bash Tools/serve-web.sh`（固定 3000 埠）。建置時 Console 會提醒「這次建置連的是測試資料庫」。
+3. 確認連對：建置時 Console 會印「連線設定：… → https://<專案>.supabase.co」；遊戲啟動時瀏覽器 Console 也會印「連線到 …」。
+   **平台與遊戲必須連同一個專案**，否則登入憑證不通用，遊戲會顯示「登入已逾時」（實際是 401）。
+4. 測完**刪掉 `supabase_test.json`**。忘了刪也不會部署出去：CI（命令列建置）看到這個檔案會直接拒絕建置。
 
 ### 編輯器 Play 模式
 
@@ -201,10 +230,11 @@ python3 Tools/fbx_mask_report.py Assets/Art/Models/*.fbx
 
 ## 介面圖示
 
-六項服事、九顆聖靈果子的圖示在 `Assets/Resources/Icons/`（128×128、透明背景），用 Blender 腳本畫出來：
+七項服事、九顆聖靈果子的圖示在 `Assets/Resources/Icons/`（128×128、透明背景），用 Blender 腳本畫出來：
 
 ```bash
 blender -b --python Tools/make_icons.py -- Assets/Resources/Icons
+blender -b --python Tools/make_icons.py -- Assets/Resources/Icons secretary   # 只重畫指定的圖示
 ```
 
 - 檔名對照在 `Assets/Core/Catalog.cs`：果子用 `Fruit.Icon`（英文），服事項目用 `ServiceIcon()` 依**關鍵字**比對
@@ -263,6 +293,7 @@ Secrets 未設定時，`unity` 與 `deploy` 會在 Actions 頁面留下黃色警
    **不要**在 Vercel 網站用「Import Git Repository」——Vercel 無法建置 Unity，建置交給 CI。
 2. 產生的 `.vercel/project.json` 裡有 `orgId` 與 `projectId`，分別存成 Secrets `VERCEL_ORG_ID`、`VERCEL_PROJECT_ID`。
 3. 到 [vercel.com/account/tokens](https://vercel.com/account/tokens) 建立 token，存成 `VERCEL_TOKEN`。
-4. 之後每次 merge 進 `main`，CI 建置完成就會自動部署。`vercel.json`（壓縮檔的標頭設定）會一起帶上去。
+4. 之後每次 merge 進 `main`，CI 建置完成就會自動部署。`vercel.json` 會一起帶上去：壓縮檔的標頭，以及
+   **禁止被別的網站用框架嵌入**（`X-Frame-Options: DENY`、`frame-ancestors 'none'`）與 `Referrer-Policy: no-referrer`。
 
 部署後的網址要填回牧區平台，作為家長服事卡頁「去看靈獸」連結的目標（平台端 P1）。

@@ -23,6 +23,8 @@ namespace SpiritBeast.Runtime
         static readonly Vector4 Ambient = new Vector4(0.55f * 0.6f, 0.60f * 0.6f, 0.65f * 0.6f, 1f);
         // 背景：上面的世界顏色經過 AgX 後，算圖裡的像素值（sRGB）
         static readonly Color32 Background = new Color32(151, 155, 159, 255);
+        /// <summary>光影模式的背景色（＝美術預覽算圖的攝影棚灰）：介面下方也用同一色，整個畫面一致</summary>
+        public static Color StudioBackground => Background;
         const string PrefKey = "SpiritBeast.RenderMode";
 
         public static RenderMode Mode { get; private set; }

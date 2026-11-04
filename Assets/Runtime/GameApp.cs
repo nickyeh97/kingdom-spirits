@@ -17,9 +17,12 @@ namespace SpiritBeast.Runtime
 #if UNITY_WEBGL && !UNITY_EDITOR
         [System.Runtime.InteropServices.DllImport("__Internal")]
         static extern string SB_TakeAuthFragment();
+        [System.Runtime.InteropServices.DllImport("__Internal")]
+        static extern void SB_BackToPlatform();
 #else
         // 編輯器 Play 模式：以環境變數 SPIRIT_DEV_FRAGMENT 提供片段（見 docs/DEVELOPMENT.md）
         static string SB_TakeAuthFragment() => Environment.GetEnvironmentVariable("SPIRIT_DEV_FRAGMENT") ?? "";
+        static void SB_BackToPlatform() => Debug.Log("[遊戲] 回到牧區平台（網頁版才會換頁）");
 #endif
 
         enum Page { Loading, Error, FirstMeet, Home, Card, Wardrobe, Log, Celebrate }
@@ -42,8 +45,10 @@ namespace SpiritBeast.Runtime
         Camera _camera;
         readonly System.Random _random = new System.Random();
 
-        // S1／S4 挑選中的外觀
-        string _pickVariant, _pickPalette;
+        // S1／S4 挑選中的外觀；換裝扮另有「背景」分頁（背景、渲染風格：存在這台裝置，按儲存才算數）
+        string _pickVariant, _pickPalette, _pickBackdrop;
+        RenderMode _pickStyle;
+        int _wardrobeTab;
         // S5 登錄步驟：0 家長確認 → 1 選項目 → 2 選果子 → 3 確認
         int _logStep;
         bool _parentConfirmed;
@@ -74,11 +79,23 @@ namespace SpiritBeast.Runtime
             Render();   // 「靈獸準備中…」
 
             var auth = AuthFragment.Parse(_fragment);
-            var configAsset = Resources.Load<TextAsset>("supabase");
+            // 測試資料庫：本機放 Resources/supabase_test.json（不進版控）就改連它，正式的 supabase.json 不用動
+            var configAsset = Resources.Load<TextAsset>("supabase_test");
+            if (configAsset == null) configAsset = Resources.Load<TextAsset>("supabase");
             var config = SupabaseConfig.Parse(configAsset != null ? configAsset.text : null);
             if (!auth.IsValid) { Fail("請從牧區平台的「我的 → 小領袖靈獸」開啟"); return; }
-            if (config == null) { Fail("遊戲設定尚未完成，請通知同工"); return; }
+            if (config == null)
+            {
+                // 給開發者看的原因（家長只看到下面那句）：用了哪個檔、為什麼不能用
+                var file = configAsset == null ? "找不到 Resources/supabase.json"
+                    : "Resources/" + configAsset.name + ".json 的 url／anonKey 格式不對或仍是範本值";
+                Debug.LogError("[設定] 連線設定無法使用：" + file);
+                Fail("遊戲設定尚未完成，請通知同工");
+                return;
+            }
 
+            // 連到哪個資料庫（只有網址）：本機測試時拿到 401 先看這行——平台與遊戲要連同一個專案
+            Debug.Log("[設定] 連線到 " + config.Url + "（Resources/" + configAsset.name + ".json）");
             _childId = auth.ChildId;
             _api = new SupabaseClient(config, auth.AccessToken);
             StartCoroutine(LoadAll());
@@ -89,9 +106,55 @@ namespace SpiritBeast.Runtime
             _camera = Camera.main;
             if (_camera == null) _camera = new GameObject("Main Camera").AddComponent<Camera>();
             _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = new Color(0.99f, 0.96f, 0.89f);
-            _camera.transform.position = new Vector3(0f, 1.2f, -5f);
-            _camera.transform.LookAt(new Vector3(0f, 0.85f, 0f));
+            // 鏡頭固定在框得下小領袖的距離（進化時看得出長大）；2026-11-01 組長：原本 5 公尺太遠、靈獸太小。
+            // 2.6 公尺＋靈獸畫面延伸到對話框：每公尺約 146 個邏輯像素（原本 50），小領袖頭頂仍在標題列下面
+            _camera.transform.position = new Vector3(0f, 1.0f, -2.6f);
+            _camera.transform.LookAt(LookAt);
+            var offset = _camera.transform.position - LookAt;
+            _basePitch = Mathf.Asin(offset.y / offset.magnitude) * Mathf.Rad2Deg;
+            _distance = offset.magnitude;
+            // 渲染風格（卡通／光影）與背景：孩子在「換裝扮 → 背景」選，記在這台裝置
+            RenderStyle.Init(_camera);
+            _backdrop = Backdrop.Load();
+            ApplyBackdrop(Shown());
+        }
+
+        // ---- 拖拉視角（跟 Demo 一樣）：左右滑＝轉靈獸，上下滑＝鏡頭以目前角度為中心上下各 30° ----
+        static readonly Vector3 LookAt = new Vector3(0f, 0.8f, 0f);
+        const float PitchRange = 30f;
+        float _basePitch, _pitch, _distance;
+
+        void Orbit(Vector2 delta)
+        {
+            Touched();
+            if (_beast.Evolving) return;
+            _beast.Yaw -= delta.x / Screen.width * 360f;
+            _pitch = Mathf.Clamp(_pitch - delta.y / Screen.height * 120f, -PitchRange, PitchRange);
+            float a = (_basePitch + _pitch) * Mathf.Deg2Rad;
+            _camera.transform.position = LookAt + new Vector3(0f, Mathf.Sin(a), -Mathf.Cos(a)) * _distance;
+            _camera.transform.LookAt(LookAt);
+        }
+
+        // ---- 背景與渲染風格 ----
+        Backdrop _backdrop;
+
+        /// <summary>現在畫面用的背景：光影風格固定攝影棚灰；卡通風格用選的那一組（換裝扮時用正在預覽的）</summary>
+        Backdrop Shown()
+        {
+            if (RenderStyle.Mode == RenderMode.Blender) return Backdrop.Studio;
+            return _page == Page.Wardrobe && _pickBackdrop != null ? Backdrop.Find(_pickBackdrop) : _backdrop;
+        }
+
+        /// <summary>鏡頭背景（上方）；介面底色（下方）在 Render 用同一色</summary>
+        void ApplyBackdrop(Backdrop b)
+        {
+            if (_camera != null) _camera.backgroundColor = b.Color;
+        }
+
+        void ApplyStyle(RenderMode mode)
+        {
+            if (RenderStyle.Mode != mode) RenderStyle.Apply(mode);
+            ApplyBackdrop(Shown());
         }
 
         // ---- 資料 ----
@@ -140,6 +203,8 @@ namespace SpiritBeast.Runtime
             if (failed >= 0) { _notice = SupabaseApi.DescribeError(failed); Render(); yield break; }
             _profile = new BeastProfile(_pickVariant, _pickPalette,
                 _profile != null ? _profile.Encouragements : new string[0]);
+            _backdrop = Backdrop.Find(_pickBackdrop ?? _backdrop.Id);
+            Backdrop.Save(_backdrop);
             GoHome();
         }
 
@@ -165,6 +230,12 @@ namespace SpiritBeast.Runtime
             if (_outcome.Evolved) _beast.Evolve(_profile.Variant, _profile.Palette, _outcome.StageAfter);
             else _beast.Celebrate();
             Go(Page.Celebrate);
+            // 星星從靈獸畫面的中間冒出來（靈獸畫面的高度由版面決定，所以換頁之後才算）
+            var pal = Catalog.FindPalette(_profile.Palette);
+            var main = PaletteMaterial.Hex(pal.Main); var accent = PaletteMaterial.Hex(pal.Accent);
+            var center = new Vector2(0.5f, 1f - _camera.rect.height * 0.5f);
+            if (_outcome.Evolved) _fx.Evolve(center, main, accent);
+            else _fx.LevelUp(center, main, accent);
         }
 
         // ---- 導覽 ----
@@ -229,6 +300,7 @@ namespace SpiritBeast.Runtime
         // 狀態一變就整頁重建（Render）：頁面元件少，重建比逐一更新簡單、不會漏改。
 
         RectTransform _column, _root, _ui, _background;
+        Sparkles _fx;
         bool _wasEvolving;
         Vector2Int _screen;
         float _height, _top;
@@ -246,7 +318,11 @@ namespace SpiritBeast.Runtime
         void Render()
         {
             Touched();   // 每次重畫都是因為有操作（或換頁）
-            if (_column == null) _column = UiKit.CreateCanvas("GameUI", out _root);
+            if (_column == null)
+            {
+                _column = UiKit.CreateCanvas("GameUI", out _root);
+                _fx = Sparkles.Create(_root);   // 效果層在介面上面，換頁重建時不動它
+            }
             if (_ui != null) Destroy(_ui.gameObject);
             if (_background != null) Destroy(_background.gameObject);
             _ui = UiKit.Group(_column, "Page");
@@ -256,9 +332,18 @@ namespace SpiritBeast.Runtime
             _wasEvolving = _beast != null && _beast.Evolving;
 
             _height = UiKit.Height(_column);
+            // 靈獸之家與慶祝頁：靈獸畫面往下延伸到對話框上緣（2026-11-01：對話框改貼在下方按鈕上面）
+            if (_page == Page.Home || _page == Page.Celebrate)
+            {
+                float share0 = Mathf.Clamp((BubbleY() - 6f) / _height, 0.45f, 0.82f);
+                _camera.rect = new Rect(0f, 1f - share0, 1f, share0);
+            }
             float share = _camera != null && _camera.enabled ? _camera.rect.height : 0f;
             _top = _height * share;
-            UiKit.Band(_background, UiKit.Paper, 0f, 1f - share);
+            // 上下同一色：下方介面的底色跟靈獸身後一樣（2026-11-01 組長）
+            var shown = Shown();
+            ApplyBackdrop(shown);
+            UiKit.Band(_background, shown.Color, 0f, 1f - share);
 
             switch (_page)
             {
@@ -276,6 +361,16 @@ namespace SpiritBeast.Runtime
             if (_notice != null) UiKit.Label(_ui, _notice, 14, 16, _height - 130, 368, 40);
         }
 
+        // ---- 下方的對話框：貼在按鈕上面（慶祝頁中間夾一行邀請）----
+        const float BubbleH = 88f, ButtonsGap = 84f;
+
+        float BubbleY()
+        {
+            float bottom = _height - ButtonsGap - 10f;                       // 按鈕上緣再空一點
+            if (_page == Page.Celebrate && _invitation != null) bottom -= 40f; // 邀請那一行
+            return bottom - BubbleH;
+        }
+
         // 按鈕的共同設定：儲存中全部不能按
         Button Btn(string text, float x, float y, float w, float h, Action onClick, Color? tint = null,
                    int size = 18, string icon = null, bool enabled = true) =>
@@ -288,34 +383,46 @@ namespace SpiritBeast.Runtime
 
         void DrawError()
         {
-            UiKit.Label(_ui, _error, 22, 24, _height / 2 - 80, 352, 100);
-            UiKit.Label(_ui, "可以關掉這個頁面，回到牧區平台再開一次。", 14, 24, _height / 2 + 30, 352, 60);
+            UiKit.Label(_ui, _error, 22, 24, _height / 2 - 110, 352, 100);
+            UiKit.Label(_ui, "回到牧區平台，再點一次「小領袖靈獸」就好。\n靈獸和服事紀錄都好好的，不會不見。", 14, 24, _height / 2, 352, 50);
+            Btn("回到牧區平台", 100, _height / 2 + 70, 200, 56, SB_BackToPlatform, UiKit.Leaf);
         }
 
         void DrawHome()
         {
             var v = Catalog.FindVariant(_profile.Variant);
             UiKit.Label(_ui, (v != null ? v.DisplayName : _profile.Variant) + " · " + GrowthRules.StageName(_card.Stage), 22, 0, 8, 400, 34);
-            UiKit.Label(_ui, _childName + " 的靈獸", 14, 0, 40, 400, 24);
             Btn(BackgroundMusic.Label, 316, 8, 76, 26, () => { BackgroundMusic.Toggle(); Render(); }, size: 12);   // 聚會現場可以關掉
-            // 點靈獸：跳一下（沒有其他玩法）
-            UiKit.Hotspot(_ui, 0, 64, 400, _top - 70, () => { Touched(); _beast.Hop(); });   // 睡著時點一下＝醒來
+            // 點靈獸：跳一下（睡著時點一下＝醒來）；拖拉＝轉靈獸、上下看（跟 Demo 一樣）
+            UiKit.Swipe(_ui, 0, 64, 400, _top - 70, () => { Touched(); _beast.Hop(); }, Orbit);
 
-            UiKit.Bubble(_ui, _bubble, 24, _top + 16, 352, 120);
+            UiKit.Bubble(_ui, _bubble, 24, BubbleY(), 352, BubbleH, 15);
 
-            float y = _height - 84;
-            Btn("服事卡", 16, y, 116, 60, () => Go(Page.Card));
-            Btn("換裝扮", 142, y, 116, 60, () =>
+            float y = _height - ButtonsGap;
+            CuteBtn("服事卡", 16, y, 116, 0, () => Go(Page.Card));
+            CuteBtn("換裝扮", 142, y, 116, 1, () =>
             {
                 _pickVariant = _profile.Variant;
                 _pickPalette = _profile.Palette;
+                _pickBackdrop = _backdrop.Id;
+                _pickStyle = _pickStyleBefore = RenderStyle.Mode;
+                _wardrobeTab = 0;
                 Go(Page.Wardrobe);
             });
-            Btn("＋1 服事", 268, y, 116, 60, () =>
+            CuteBtn("＋1 服事", 268, y, 116, 2, () =>
             {
                 _logStep = 0; _parentConfirmed = false; _pickItem = null; _pickFruit = null;
                 Go(Page.Log);
-            }, UiKit.Leaf);
+            });
+        }
+
+        /// <summary>3D 可愛按鈕：顏色跟著背景，卡通風格加描邊、光影風格改用落影</summary>
+        Button CuteBtn(string text, float x, float y, float w, int colorIndex, Action onClick)
+        {
+            var b = Shown();
+            var face = b.Buttons[Mathf.Clamp(colorIndex, 0, b.Buttons.Length - 1)];
+            return UiKit.CuteButton(_ui, text, x, y, w, 66, onClick, face, RenderStyle.Mode == RenderMode.Toon,
+                                    18, !_busy);
         }
 
         void DrawCard()
@@ -357,8 +464,22 @@ namespace SpiritBeast.Runtime
 
         void DrawPicker(bool first)
         {
-            UiKit.Label(_ui, first ? "天父為你預備了一位夥伴" : "換裝扮", 22, 0, 8, 400, 34);
-            if (first) UiKit.Label(_ui, _childName + "，選一位陪你一起長大的靈獸吧", 14, 0, 40, 400, 24);
+            if (first)
+            {
+                UiKit.Label(_ui, "天父為你預備了一位夥伴", 22, 0, 8, 400, 34);
+                UiKit.Label(_ui, _childName + "，選一位陪你一起長大的靈獸吧", 14, 0, 40, 400, 24);
+            }
+            else
+            {
+                UiKit.Label(_ui, "換裝扮", 22, 16, 8, 140, 34, TextAnchor.MiddleLeft);
+                // 分頁：靈獸（種類、顏色）｜背景（背景、渲染風格）
+                Btn("靈獸", 196, 8, 94, 34, () => { _wardrobeTab = 0; Render(); }, _wardrobeTab == 0 ? UiKit.Leaf : Color.white, 15);
+                Btn("背景", 298, 8, 94, 34, () => { _wardrobeTab = 1; Render(); }, _wardrobeTab == 1 ? UiKit.Leaf : Color.white, 15);
+            }
+            // 拖拉看靈獸的每個角度（標題列下面）
+            UiKit.Swipe(_ui, 0, 64, 400, _top - 70, () => _beast.Hop(), Orbit);
+
+            if (!first && _wardrobeTab == 1) { DrawBackdropPicker(); return; }
 
             float y = _top + 14;
             var variants = Catalog.AvailableVariants.ToList();
@@ -393,11 +514,68 @@ namespace SpiritBeast.Runtime
             float by = _height - 84;
             if (first)
                 Btn("就是你了！", 100, by, 200, 60, () => StartCoroutine(SaveLook()), UiKit.Leaf);
-            else
+            else WardrobeButtons();
+        }
+
+        void WardrobeButtons()
+        {
+            float by = _height - 84;
+            Btn("取消", 40, by, 150, 60, () =>
             {
-                Btn("取消", 40, by, 150, 60, GoHome);
-                Btn("儲存", 210, by, 150, 60, () => StartCoroutine(SaveLook()), UiKit.Leaf);
+                // 背景、渲染風格是即時預覽：取消就換回原本的
+                _pickBackdrop = _backdrop.Id;
+                ApplyStyle(_pickStyleBefore);
+                GoHome();
+            });
+            Btn("儲存", 210, by, 150, 60, () => StartCoroutine(SaveLook()), UiKit.Leaf);
+        }
+
+        RenderMode _pickStyleBefore;
+
+        /// <summary>
+        /// 換裝扮 →「背景」分頁：先選畫面風格；卡通風格才有四種背景可選，光影風格固定美術預覽的攝影棚灰。
+        /// 點了立刻預覽，儲存才算數。
+        /// </summary>
+        void DrawBackdropPicker()
+        {
+            float y = _top + 14;
+            UiKit.Label(_ui, "畫面風格", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
+            y += 30;
+            var styles = new[] { (RenderMode.Toon, "卡通", "描邊、顏色明亮"), (RenderMode.Blender, "光影", "柔和的光與影子") };
+            for (int i = 0; i < styles.Length; i++)
+            {
+                var (mode, name, hint) = styles[i];
+                Btn(name + "\n" + hint, 24 + i * 180, y, 172, 58, () =>
+                {
+                    _pickStyle = mode;
+                    ApplyStyle(mode);
+                    Render();
+                }, _pickStyle == mode ? UiKit.Leaf : Color.white, 15);
             }
+
+            y += 78;
+            // 光影風格固定攝影棚背景，不列背景選項（2026-11-01 組長：不需要說明文字）
+            if (_pickStyle == RenderMode.Toon)
+            {
+                UiKit.Label(_ui, "背景", 17, 24, y, 352, 26, TextAnchor.MiddleLeft);
+                y += 30;
+                for (int i = 0; i < Backdrop.All.Count; i++)
+                {
+                    var b = Backdrop.All[i];
+                    float x = 24 + i * 88;
+                    if (b.Id == _pickBackdrop) UiKit.Box(_ui, UiKit.Ink, x - 4, y - 4, 88, 66);
+                    var sw = UiKit.Box(_ui, b.Color, x, y, 80, 58);
+                    UiKit.Label(sw.transform, b.Name, 15, 0, 0, 80, 58);
+                    UiKit.Hotspot(_ui, x, y, 80, 58, () =>
+                    {
+                        if (_busy) return;
+                        _pickBackdrop = b.Id;
+                        ApplyBackdrop(Shown());
+                        Render();
+                    });
+                }
+            }
+            WardrobeButtons();
         }
 
         void DrawLog()
@@ -457,9 +635,11 @@ namespace SpiritBeast.Runtime
                 ? name + " 長大了！現在是「" + GrowthRules.StageName(_outcome.StageAfter) + "」"
                 : _outcome.Item + " 升到 " + _outcome.LevelAfter + " 等！";
             UiKit.Label(_ui, headline, 22, 0, 8, 400, 40);
-            UiKit.Bubble(_ui, _celebrateMessage, 24, _top + 16, 352, 120);
-            if (_invitation != null) UiKit.Label(_ui, _invitation, 14, 24, _top + 146, 352, 50);
-            Btn("好！", 130, _height - 84, 140, 60, GoHome, UiKit.Leaf);
+            UiKit.Swipe(_ui, 0, 56, 400, _top - 62, () => { if (!_beast.Evolving) _beast.Hop(); }, Orbit);
+            float by = BubbleY();
+            UiKit.Bubble(_ui, _celebrateMessage, 24, by, 352, BubbleH, 15);
+            if (_invitation != null) UiKit.Label(_ui, _invitation, 14, 24, by + BubbleH + 4f, 352, 34);
+            CuteBtn("好！", 130, _height - ButtonsGap, 140, 2, GoHome);
         }
     }
 }

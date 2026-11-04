@@ -73,15 +73,29 @@ namespace SpiritBeast.Tests
         [Test]
         public void Catalog_ServiceIconMatchesPlatformItemsByKeyword()
         {
-            // 平台目前的六項，各對到不同的圖示
+            // 平台目前的七項（2026-10-30），各對到不同的圖示
             var icons = Catalog.DemoServiceItems.Select(i => Catalog.ServiceIcon(i.Name)).ToList();
-            Assert.That(icons, Is.EqualTo(new[] { "offering", "piano", "instrument", "vocal", "reading", "tidy" }));
+            Assert.That(icons, Is.EqualTo(new[] { "offering", "tidy", "reading", "secretary", "instrument", "piano", "vocal" }));
+            // 舊名稱（09 月的六項）也對得到：改名前登錄的紀錄照樣有圖示
+            Assert.That(Catalog.ServiceIcon("收奉獻"), Is.EqualTo("offering"));
+            Assert.That(Catalog.ServiceIcon("環境稽核"), Is.EqualTo("tidy"));
+            Assert.That(Catalog.ServiceIcon("領讀天使-宣言/讀經/禱告"), Is.EqualTo("reading"));
             // 同工改名也對得到；對不到、空白回 null（介面只顯示文字）
             Assert.That(Catalog.ServiceIcon("敬拜-Vocal 主唱"), Is.EqualTo("vocal"));
             Assert.That(Catalog.ServiceIcon("領讀天使-禱告"), Is.EqualTo("reading"));
             Assert.That(Catalog.ServiceIcon("招待"), Is.Null);
             Assert.That(Catalog.ServiceIcon(null), Is.Null);
             Assert.That(Catalog.ServiceIcon(""), Is.Null);
+        }
+
+        [Test]
+        public void Catalog_UnknownIdsFallBack()
+        {
+            // 資料庫只檢查格式（2026-11-01）：新版遊戲寫入的新靈獸／配色，舊版遊戲讀到也不能壞——
+            // 配色退回 p1，靈獸查不到（畫面用占位造型、名稱直接顯示 id）
+            Assert.That(Catalog.FindPalette("p99").Id, Is.EqualTo("p1"));
+            Assert.That(Catalog.FindPalette(null).Id, Is.EqualTo("p1"));
+            Assert.That(Catalog.FindVariant("unicorn"), Is.Null);
         }
 
         [Test]
